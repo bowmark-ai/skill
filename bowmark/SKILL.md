@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.0.0 # x-release-please-version
+version: 1.0.1 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
