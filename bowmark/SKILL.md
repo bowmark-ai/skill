@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.0.1 # x-release-please-version
+version: 1.1.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -58,16 +58,16 @@ Execute the recipe exactly as written. The cheatsheet was built from prior crawl
 **`fastest_path`** — substitute `{name}` parameters URL-encoded into `template`, then navigate. If `fastest_path` is `null` (the one envelope field that's explicitly nulled rather than omitted), skip to `ui_procedure`.
 
 **`ui_procedure.steps`** — each step has:
-- `action` — a verb string. Common values: `goto`, `click`, `fill`, `wait`, `use_feature`. Read together with `description` (always present, always an actionable directive).
-- `description` — always actionable. Treat as the source of truth for what to do; `action` is a hint about how.
-- `url` — present on `goto`-style steps.
+- `action` — a verb string. Common values: `navigate`, `click`, `type`, `fill`, `scroll`, `read`, `verify`, `select`, `submit`, `use_feature`. Not an enum — read `action` together with `locator`/`value`/`url` to decide what to do.
+- `description` — **optional**. Present only when `action` + `locator` would be ambiguous on its own (e.g. clicking an unnamed search result). When present, it's the source of truth for the step's intent; when absent, the action+locator+value tuple is self-explanatory.
+- `url` — present on `navigate` steps.
 - `locator` — the target element. Try interpretations in order: CSS selector (if it looks like one — `button#submit`, `[data-test=...]`), then visible text, then aria-label.
-- `value` — what to type, for `fill` steps.
+- `value` — what to type, for `fill` / `type` steps.
 - `precondition` — state that must be true before this step is safe. Check only what's named; don't snapshot the whole page.
 - `irreversible: true` — submits a form, sends an email, charges a card, etc. **Confirm with the user before executing.**
 - `mechanism_notes` — rich how-it-works detail captured by deep crawls. Read these when present.
 
-**`provenance.confidence`** — at ≥ 0.8, execute directly. At ≤ 0.5, one quick check (page title plausible?) is acceptable.
+**`verify_more`** — top-level boolean, `true` only on low-confidence envelopes. When present, do one cheap sanity check (page title plausible?) before committing to the recipe. When absent, execute directly.
 
 ## Falling back to manual browsing
 
