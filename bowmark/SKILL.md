@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.1.0 # x-release-please-version
+version: 1.2.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -32,14 +32,19 @@ The tool descriptions on `ask` and `report_outcome` carry the argument shapes an
 
 ## When to call `report_outcome`
 
-Recipes improve through honest feedback. False `success: true` degrades the recipe for every other agent. **Default to NOT calling unless one of these applies:**
+Recipes improve through honest feedback. **`success: true` means a specific thing: every step in the recipe ran as written AND the user-visible outcome matched the task.** If either half is false — you skipped a step, the locator wasn't there, you fell back to your own search, the recipe led you to the wrong entity — the answer is `success: false`, even when you eventually got the user the right result.
+
+The most common mistake is reporting `true` because you completed the *task* despite the *recipe* failing. Don't. The whole point of feedback is for the next crawl to know the recipe is broken; reporting `true` while writing "the X button wasn't available" in evidence cancels that signal.
+
+**Quick test**: if your evidence reads "I had to…", "X wasn't visible so I…", "I switched to…", "the step didn't work but I…", then `success` is `false`. Be honest about partial wins.
 
 | Situation | Call? | `success` |
 |---|---|---|
-| Recipe completed; user-visible outcome matches the task | ✅ | `true` |
-| Recipe completed but produced the wrong outcome | ✅ | `false` |
+| Every step ran as written; user-visible outcome matches the task | ✅ | `true` |
+| Recipe ran end-to-end but produced the wrong outcome (wrong entity, stale data, dead end) | ✅ | `false` |
 | A step failed mid-execution (locator missing, unexpected nav, error response) | ✅ | `false` |
-| You abandoned the recipe and finished the task another way | ✅ | `false` |
+| You abandoned the recipe at any step and finished the task another way — **even when you got the right answer** | ✅ | `false` |
+| You skipped a step because it looked unnecessary or you "knew better" | ✅ | `false` |
 | Recipe triggered an async action (form submit, email); sync response was successful | ✅ | `true` |
 | `ask` returned a miss (no `id` on the envelope) | ❌ | — |
 | User interrupted before the recipe reached its final step | ❌ | — |
@@ -47,7 +52,7 @@ Recipes improve through honest feedback. False `success: true` degrades the reci
 | Task is still waiting on user input you don't have | ❌ | — (defer until you have closure) |
 | You called `ask` multiple times in one task | ✅ once | per the row that matches |
 
-On `success: false`, put a one-sentence description of the first failing step or wrong outcome in `evidence.what_happened` — that's what the re-crawl targets.
+On `success: false`, put a one-sentence description of the first failing step or wrong outcome in `evidence.what_happened` — that's what the re-crawl targets. On `success: true`, evidence is optional and usually omitted.
 
 ## Executing the recipe — follow it verbatim
 
@@ -77,7 +82,7 @@ Fall back when:
 - `ask` returned `status: "site_not_supported"` — Bowmark has no recipes for this domain. Optionally tell the user once.
 - `ask` returned 503 with `embedder_unavailable` or `synth_unavailable` — retry once after the `Retry-After` header, then browse manually.
 
-On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`.
+On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`. You can also avoid the round-trip up front: when the site has multiple surfaces and you already know which one (Google Maps, Google Flights, Stripe API docs, etc.), pass it inline as `site: "google.com/maps"` — the path is honored as an implicit `scopeHint` when it matches a registered surface.
 
 ## Don'ts
 
