@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.2.0 # x-release-please-version
+version: 1.2.1 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -32,18 +32,22 @@ The tool descriptions on `ask` and `report_outcome` carry the argument shapes an
 
 ## When to call `report_outcome`
 
-Recipes improve through honest feedback. **`success: true` means a specific thing: every step in the recipe ran as written AND the user-visible outcome matched the task.** If either half is false — you skipped a step, the locator wasn't there, you fell back to your own search, the recipe led you to the wrong entity — the answer is `success: false`, even when you eventually got the user the right result.
+The report is about the **recipe** — did each step run as written without hiccup? — **not** about whether the user got a good answer. Two different concerns; only the first one is what `report_outcome` measures.
 
-The most common mistake is reporting `true` because you completed the *task* despite the *recipe* failing. Don't. The whole point of feedback is for the next crawl to know the recipe is broken; reporting `true` while writing "the X button wasn't available" in evidence cancels that signal.
+**`success: true`** = every step executed AS WRITTEN. Each locator resolved on the first try. No extra clicks, scrolls, or waits beyond the recipe. No raw browser code (`browser_run_code_unsafe` etc.). No skipped steps. No substituting your own selector for one that didn't match. If you walked the recipe clean from step 1 to the last step, report true — *even if the answer ended up being wrong*. (Wrong answer is a separate re-crawl concern; the recipe still executed.)
 
-**Quick test**: if your evidence reads "I had to…", "X wasn't visible so I…", "I switched to…", "the step didn't work but I…", then `success` is `false`. Be honest about partial wins.
+**`success: false`** = any hiccup at all. A locator wasn't there. A click did nothing. You retried with a different selector. You fell back to raw browser code. You added scrolls or clicks not in the recipe to recover state. You skipped a step. The recipe took you somewhere unexpected. Report false — *even if you eventually got the user the right answer*. Honest failure reports trigger a re-crawl that fixes the recipe; false `true` silently degrades it for every future agent.
+
+**Quick self-check** before reporting: re-read your tool-call sequence since the recipe started. If it's longer than the recipe's step list, the answer is `false`. If you used raw browser code, the answer is `false`. If your evidence is tempted to say "I switched to…", "the X button wasn't there so…", "I had to scroll…", "I tried clicking 3 different things…", the answer is `false`.
 
 | Situation | Call? | `success` |
 |---|---|---|
-| Every step ran as written; user-visible outcome matches the task | ✅ | `true` |
-| Recipe ran end-to-end but produced the wrong outcome (wrong entity, stale data, dead end) | ✅ | `false` |
-| A step failed mid-execution (locator missing, unexpected nav, error response) | ✅ | `false` |
-| You abandoned the recipe at any step and finished the task another way — **even when you got the right answer** | ✅ | `false` |
+| Every step ran as written; zero extra tool calls; clean walk | ✅ | `true` |
+| Recipe ran clean but the answer was wrong (wrong entity, stale data) | ✅ | `true` *(recipe ran; answer correctness is a separate concern)* |
+| A step failed mid-execution (locator missing, unexpected nav, error) | ✅ | `false` |
+| You retried a step with a different selector or used raw JS to recover | ✅ | `false` |
+| You scrolled / clicked extra to find state the recipe assumed was visible | ✅ | `false` |
+| You abandoned the recipe and finished some other way | ✅ | `false` |
 | You skipped a step because it looked unnecessary or you "knew better" | ✅ | `false` |
 | Recipe triggered an async action (form submit, email); sync response was successful | ✅ | `true` |
 | `ask` returned a miss (no `id` on the envelope) | ❌ | — |
@@ -52,7 +56,17 @@ The most common mistake is reporting `true` because you completed the *task* des
 | Task is still waiting on user input you don't have | ❌ | — (defer until you have closure) |
 | You called `ask` multiple times in one task | ✅ once | per the row that matches |
 
-On `success: false`, put a one-sentence description of the first failing step or wrong outcome in `evidence.what_happened` — that's what the re-crawl targets. On `success: true`, evidence is optional and usually omitted.
+### `evidence` — describe the recipe, not the task
+
+Always populate `evidence.what_happened`, on success AND failure. It describes **how the recipe behaved**, not what you found for the user. The crawler reads it to decide what to re-investigate; a task summary tells it nothing.
+
+- ❌ "Found Saan Saan Cafe with 4.9 stars" — task outcome.
+- ❌ "Successfully searched for restaurants in Vancouver" — task summary that hides recipe drift.
+- ✅ "All 6 steps ran as written. No retries." — clean success.
+- ✅ "Steps 1–4 clean. Step 5 (`All filters` button) didn't resolve; tried 3 alternate selectors then used `browser_run_code_unsafe` to click. Step 6 (`Top rated`) never reached — filter wasn't visible after step 5 substitute." — actionable failure.
+- ✅ "Step 3 selector `input[name='q']` matched but typing didn't fire the autocomplete the recipe assumed. Fell back to `fill_form`." — specific hiccup.
+
+The first failing step is what the re-crawl targets, so name it specifically. Saying "the recipe worked" or "I got the answer" tells the next crawl nothing.
 
 ## Executing the recipe — follow it verbatim
 
@@ -91,7 +105,8 @@ On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeH
 - Don't call `ask` for localhost or RFC1918 IPs. No recipes exist and never will.
 - Don't validate the recipe before executing. If the cheatsheet says click X, click X.
 - Don't skip `report_outcome` after executing a recipe — silence is how recipes degrade.
-- Don't report `success: true` because the recipe technically ran. Success means the user-visible outcome matched the task.
+- Don't report `success: true` because you got the user the right answer. Success means the **recipe** ran clean — every step as written, no retries, no JS-eval fallbacks, no extra clicks.
+- Don't write evidence about what you found ("identified restaurant X"). Write evidence about how the recipe behaved ("steps 1–4 clean, step 5 locator missed").
 
 ## When `ask` and `report_outcome` aren't available
 
