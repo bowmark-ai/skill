@@ -6,7 +6,7 @@ The skill for [Bowmark](https://bowmark.ai) — pre-computed navigation recipes 
 npx skills add bowmark-ai/skill
 ```
 
-The skill calls Bowmark's MCP server — wire that up at [bowmark.ai/#install](https://bowmark.ai/#install).
+The skill calls Bowmark's MCP server — wire that up at [bowmark.ai/#install](https://bowmark.ai/#install) or via [Smithery](https://smithery.ai/servers/bowmark-ai/bowmark).
 
 ## License
 
