@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.2.2 # x-release-please-version
+version: 1.3.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -25,7 +25,7 @@ Recipes for getting around known websites. The agent looks up a recipe, executes
 ## The loop
 
 1. **Before any browser action**, call `ask({ site, task })`.
-2. On `status: "ok"`, execute `fastest_path` (URL template) if present, else `ui_procedure.steps`. Don't snapshot the DOM to verify what the recipe already documents.
+2. On `status: "ok"`, execute `shortcut` (URL template) if present, else `ui_procedure.steps`. Don't snapshot the DOM to verify what the recipe already documents.
 3. After the recipe finished or definitively failed, call `report_outcome({ envelope_id, success })`.
 
 The tool descriptions on `ask` and `report_outcome` carry the argument shapes and response schemas. This skill covers behavior and edge cases the tool descriptions can't fit.
@@ -74,14 +74,14 @@ Execute the recipe exactly as written. The cheatsheet was built from prior crawl
 
 **Don't take screenshots while executing.** Screenshots are justified only after a step actually fails, to debug what went wrong. Reading the DOM is allowed only for the one element each step references — never to verify what the recipe already documents.
 
-**`fastest_path`** — substitute `{name}` parameters URL-encoded into `template`, then navigate. If `fastest_path` is `null` (the one envelope field that's explicitly nulled rather than omitted), skip to `ui_procedure`.
+**`shortcut`** — fill each `{name}` placeholder in `template` with the value **from your task**, URL-encode, then navigate. Each entry in `shortcut.parameters` is a slot: `{ name, description, format? }`. It describes *what* to supply ("the destination", "Origin to Destination on Date returning Date") — it does NOT contain a pre-filled value, because the recipe is cached across many different tasks. Read the `description`/`format`, then substitute the specifics your task needs (keep qualifier words like "top rated"/"cheapest" if the slot's description says ranking honors them). If `shortcut` is `null` (the one envelope field that's explicitly nulled rather than omitted), skip to `ui_procedure`.
 
 **`ui_procedure.steps`** — each step has:
 - `action` — a verb string. Common values: `navigate`, `click`, `type`, `fill`, `scroll`, `read`, `verify`, `select`, `submit`, `use_feature`. Not an enum — read `action` together with `locator`/`value`/`url` to decide what to do.
 - `description` — **optional**. Present only when `action` + `locator` would be ambiguous on its own (e.g. clicking an unnamed search result). When present, it's the source of truth for the step's intent; when absent, the action+locator+value tuple is self-explanatory.
 - `url` — present on `navigate` steps.
 - `locator` — the target element. Try interpretations in order: CSS selector (if it looks like one — `button#submit`, `[data-test=...]`), then visible text, then aria-label.
-- `value` — what to type, for `fill` / `type` steps.
+- `value` — what to type, for `fill` / `type` steps. May be a generic slot ("the destination") rather than a literal — supply the specifics your task needs, same as for `shortcut` parameters.
 - `precondition` — state that must be true before this step is safe. Check only what's named; don't snapshot the whole page.
 - `irreversible: true` — submits a form, sends an email, charges a card, etc. **Confirm with the user before executing.**
 - `mechanism_notes` — rich how-it-works detail captured by deep crawls. Read these when present.
