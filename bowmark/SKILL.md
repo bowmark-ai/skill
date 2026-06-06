@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.4.0 # x-release-please-version
+version: 1.5.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -94,7 +94,7 @@ Fall back when:
 - A step actually fails — not before.
 - The user's intent needs an action the recipe doesn't cover.
 - `ask` returned `status: "site_not_supported"` — Bowmark has no recipes for this domain. Optionally tell the user once.
-- `ask` returned `status: "rate_limited"` — this IP hit a daily cap on synthesizing *new* recipes. Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then.
+- `ask` returned `status: "rate_limited"` — a daily cap on synthesizing *new* recipes was hit (per-IP when anonymous, per-key when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then. A free API key (see "Higher limits" below) raises the anonymous cap.
 - `ask` returned 503 with `embedder_unavailable` or `synth_unavailable` — retry once after the `Retry-After` header, then browse manually.
 
 On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`. You can also avoid the round-trip up front: when the site has multiple surfaces and you already know which one (Google Maps, Google Flights, Stripe API docs, etc.), pass it inline as `site: "google.com/maps"` — the path is honored as an implicit `scopeHint` when it matches a registered surface.
@@ -109,6 +109,16 @@ On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeH
 - Don't report `success: true` because you got the user the right answer. Success means the **recipe** ran clean — every step as written, no retries, no JS-eval fallbacks, no extra clicks.
 - Don't write evidence about what you found ("identified restaurant X"). Write evidence about how the recipe behaved ("steps 1–4 clean, step 5 locator missed").
 
+## Higher limits (optional)
+
+Bowmark needs **no key** — both the MCP and the HTTP API work anonymously, capped at a per-IP daily limit on *new* recipe synthesis (cached recipes are unlimited). A free key raises that to a larger per-key daily allowance. It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
+
+- **Get a key:** sign in at bowmark.ai and mint one from the dashboard.
+- **MCP:** add it to the server's `headers` in your MCP client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request automatically; you don't pass it per call.
+- **HTTP:** if the env var `BOWMARK_API_KEY` is set, send it as `Authorization: Bearer $BOWMARK_API_KEY` (or the `X-Bowmark-Key` header). If it's unset, just call without it.
+
+Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise proceed anonymously.
+
 ## When `ask` and `report_outcome` aren't available
 
-If `mcp__bowmark__ask` isn't in your tools list, the user hasn't connected the Bowmark MCP. If you have HTTP fetch tooling, the same operations are available at `POST https://api.bowmark.ai/v1/ask` and `POST https://api.bowmark.ai/v1/outcomes` — identical request bodies, identical response shapes, unauthenticated. Otherwise, browse manually for this session and let the user know once that Bowmark could speed it up if they wired the MCP.
+If `mcp__bowmark__ask` isn't in your tools list, the user hasn't connected the Bowmark MCP. If you have HTTP fetch tooling, the same operations are available at `POST https://api.bowmark.ai/v1/ask` and `POST https://api.bowmark.ai/v1/outcomes` — identical request bodies, identical response shapes. They work unauthenticated; if `BOWMARK_API_KEY` is in the environment, attach it as `Authorization: Bearer $BOWMARK_API_KEY` for the higher limit (see "Higher limits" above). Otherwise, browse manually for this session and let the user know once that Bowmark could speed it up if they wired the MCP.
