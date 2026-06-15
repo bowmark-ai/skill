@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.5.0 # x-release-please-version
+version: 1.6.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -87,6 +87,18 @@ Execute the recipe exactly as written. The cheatsheet was built from prior crawl
 - `mechanism_notes` — rich how-it-works detail captured by deep crawls. Read these when present.
 
 **`verify_more`** — top-level boolean, `true` only on low-confidence envelopes. When present, do one cheap sanity check (page title plausible?) before committing to the recipe. When absent, execute directly.
+
+**`variants_assumed`** — top-level object, present only when you requested a non-empty behavior facet. It echoes back the facets you ASKED for (most importantly `{ auth_state, role }`), so it confirms *what view you requested* — NOT that a logged-in recipe was actually found. Bowmark soft-prefers variant-matching data but falls back to the best available, so an `auth_state: "logged_in"` request can still return a recipe drawing on public notes when the signed-in surface wasn't mapped. Treat it as a record of your request; rely on the recipe itself + the top-level `verify_more` flag for trust, and fall back to normal browsing if a step doesn't match the signed-in UI.
+
+## Requesting the logged-in view
+
+Most recipes describe a site's **logged-out** (public) surface — what an anonymous visitor sees. Some tasks only exist behind a login (org settings, billing, an owner-only dashboard). For those, pass the auth facet in `variants`:
+
+- `ask({ site, task, variants: { auth_state: "logged_in" } })` — request the signed-in view.
+- Add `role` when the privilege level changes what's available — `{ auth_state: "logged_in", role: "owner" }` (also `"admin"`, `"member"`, etc.; the vocabulary is per-site). An owner sees settings a member doesn't; the role narrows the recipe to that persona's surface.
+- Omit `variants` entirely (or pass `auth_state: "logged_out"`) for the default public view. With no `auth_state`, you always get the logged-out recipe — behavior is identical to not passing `variants`.
+
+The facets ride inside the existing `variants` object — there's no separate argument. They affect the cache key, and the facets you requested come back on the envelope's `variants_assumed` (a record of your request, not proof a logged-in recipe was found). Bowmark returns the logged-in recipe only if a prior crawl signed in and mapped that surface; otherwise you fall through to the logged-out recipe (or a miss). Either way, **you** still have to be signed into the site in your own browser session to execute a logged-in recipe — Bowmark supplies the recipe, not the credentials.
 
 ## Falling back to manual browsing
 
