@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.6.0 # x-release-please-version
+version: 1.6.1 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -106,7 +106,7 @@ Fall back when:
 - A step actually fails — not before.
 - The user's intent needs an action the recipe doesn't cover.
 - `ask` returned `status: "site_not_supported"` — Bowmark has no recipes for this domain. Optionally tell the user once.
-- `ask` returned `status: "rate_limited"` — a daily cap on synthesizing *new* recipes was hit (per-IP when anonymous, per-key when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then. A free API key (see "Higher limits" below) raises the anonymous cap.
+- `ask` returned `status: "rate_limited"` — a cap on synthesizing *new* recipes was hit (per-IP daily when anonymous, your account's monthly plan budget when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then. A free API key (see "Higher limits" below) lifts the anonymous per-IP cap to a plan budget.
 - `ask` returned 503 with `embedder_unavailable` or `synth_unavailable` — retry once after the `Retry-After` header, then browse manually.
 
 On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`. You can also avoid the round-trip up front: when the site has multiple surfaces and you already know which one (Google Maps, Google Flights, Stripe API docs, etc.), pass it inline as `site: "google.com/maps"` — the path is honored as an implicit `scopeHint` when it matches a registered surface.
@@ -123,7 +123,7 @@ On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeH
 
 ## Higher limits (optional)
 
-Bowmark needs **no key** — both the MCP and the HTTP API work anonymously, capped at a per-IP daily limit on *new* recipe synthesis (cached recipes are unlimited). A free key raises that to a larger per-key daily allowance. It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
+Bowmark needs **no key** — both the MCP and the HTTP API work anonymously, capped at a per-IP daily limit on *new* recipe synthesis (cached recipes are unlimited). A key swaps that per-IP daily cap for your account's **monthly plan budget** (the free plan covers ~1,000 new-recipe synths/month; paid plans far more). It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
 
 - **Get a key:** sign in at bowmark.ai and mint one from the dashboard.
 - **MCP:** add it to the server's `headers` in your MCP client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request automatically; you don't pass it per call.
