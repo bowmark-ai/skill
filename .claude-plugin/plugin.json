@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "bowmark",
+  "version": "0.2.0",
+  "description": "Pre-computed navigation recipes for known websites — parameterized URLs and short UI procedures verified by prior crawls, so the agent skips explore-and-discover. Bundles the bowmark skill and auto-wires the hosted MCP server.",
+  "author": {
+    "name": "Bowmark AI",
+    "url": "https://bowmark.ai"
+  },
+  "homepage": "https://bowmark.ai",
+  "repository": "https://github.com/bowmark-ai/plugin",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "web-agent",
+    "browser",
+    "navigation",
+    "playwright"
+  ],
+  "skills": [
+    "./skills/bowmark"
+  ],
+  "mcpServers": {
+    "bowmark": {
+      "type": "http",
+      "url": "https://api.bowmark.ai/mcp"
+    }
+  }
+}

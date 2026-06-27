@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "name": "bowmark-ai",
+  "owner": {
+    "name": "Bowmark AI",
+    "url": "https://bowmark.ai"
+  },
+  "description": "Official Bowmark plugin for Claude Code — navigation recipes for known websites, skill + hosted MCP in one install.",
+  "plugins": [
+    {
+      "name": "bowmark",
+      "source": "./",
+      "description": "Pre-computed navigation recipes for known websites. Bundles the bowmark skill and auto-wires the hosted MCP server (api.bowmark.ai/mcp).",
+      "category": "productivity",
+      "keywords": ["mcp", "web-agent", "browser", "navigation", "playwright"]
+    }
+  ]
+}
