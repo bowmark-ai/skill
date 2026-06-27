@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.8.0 # x-release-please-version
+version: 1.8.1 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -15,7 +15,7 @@ description: |
   local-dev target; open-ended web search with no destination ("what's the
   news"); reading local files; querying JSON APIs that aren't
   browser-driven; or facts already in training data.
-allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome
+allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome, WebFetch
 ---
 
 # bowmark
