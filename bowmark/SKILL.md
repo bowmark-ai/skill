@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.13.0 # x-release-please-version
+version: 1.14.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -15,7 +15,7 @@ description: |
   local-dev target; open-ended web search with no destination ("what's the
   news"); reading local files; querying JSON APIs that aren't
   browser-driven; or facts already in training data.
-allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome, WebFetch
+allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome, mcp__bowmark__execute, WebFetch
 ---
 
 # bowmark
@@ -25,7 +25,7 @@ Recipes for getting around known websites. The agent looks up a recipe, executes
 ## The loop
 
 1. **Before any browser action**, call `ask({ site, task })`.
-2. On `status: "ok"`, execute `shortcut` (URL template) if present, else `ui_procedure.steps`. Don't snapshot the DOM to verify what the recipe already documents.
+2. On `status: "ok"`, execute `shortcut` (URL template) if present, else `ui_procedure.steps`. Don't snapshot the DOM to verify what the recipe already documents. If the envelope carries an `executable` block, you can instead have Bowmark run the recipe for you — see "Letting Bowmark run it".
 3. After the recipe finished or definitively failed, call `report_outcome({ envelope_id, success })`.
 
 The tool descriptions on `ask` and `report_outcome` carry the argument shapes and response schemas. This skill covers behavior and edge cases the tool descriptions can't fit.
@@ -90,6 +90,18 @@ Execute the recipe exactly as written. The cheatsheet was built from prior crawl
 **`verify_more`** — top-level boolean, `true` only on low-confidence envelopes. When present, do one cheap sanity check (page title plausible?) before committing to the recipe. When absent, execute directly.
 
 **`variants_assumed`** — top-level object, present only when you requested a non-empty behavior facet. It echoes back the facets you ASKED for (most importantly `{ auth_state, role }`), so it confirms *what view you requested* — NOT that a logged-in recipe was actually found. Bowmark soft-prefers variant-matching data but falls back to the best available, so an `auth_state: "logged_in"` request can still return a recipe drawing on public notes when the signed-in surface wasn't mapped. Treat it as a record of your request; rely on the recipe itself + the top-level `verify_more` flag for trust, and fall back to normal browsing if a step doesn't match the signed-in UI.
+
+**`executable`** — top-level object, present only on some `ok` envelopes: `{ script_id, kind: "remote", param_schema, outputs, last_verified? }`. It means Bowmark has a precompiled, verified script for this exact recipe and can run it FOR you. Absent = nothing changes, run the recipe yourself. See below.
+
+## Letting Bowmark run it
+
+When an envelope carries an `executable` block, you have a shortcut past the browser entirely: instead of walking `ui_procedure` yourself, call `execute({ script_id: executable.script_id, inputs })` and let Bowmark run the recipe on its own backend.
+
+- **`inputs`** — one value per param in `executable.param_schema` (each `{ name, required, description? }`). Supply the specifics your task needs, same as you would when filling a `shortcut` template or a `fill` step's slot.
+- **On `{ status: "ok", outputs }`** — `outputs` is the live, freshly-fetched data (named per `executable.outputs`). Use it directly; you're done, no browser needed. A clean `execute` needs no `report_outcome`.
+- **On `{ status: "fell_back", reason }`** — the compiled script didn't run clean. Fall back to executing `ui_procedure` yourself the normal way (and `report_outcome` on THAT execution as usual). `executable` is an optimization, never the only path.
+
+It's fine to always try `execute` when `executable` is present — the worst case is a `fell_back` that costs you nothing but a retry via the recipe you already have.
 
 ## Requesting the logged-in view
 
