@@ -1,6 +1,5 @@
 ---
 name: bowmark
-version: 1.15.1 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -15,7 +14,6 @@ description: |
   local-dev target; open-ended web search with no destination ("what's the
   news"); reading local files; querying JSON APIs that aren't
   browser-driven; or facts already in training data.
-allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome, mcp__bowmark__execute, WebFetch
 ---
 
 # bowmark
@@ -34,7 +32,7 @@ The tool descriptions on `ask` and `report_outcome` carry the argument shapes an
 
 The report is about the **recipe** — did each step run as written without hiccup? — **not** about whether the user got a good answer. Two different concerns; only the first one is what `report_outcome` measures.
 
-**`success: true`** = every step executed AS WRITTEN. Each locator resolved on the first try. No extra clicks, scrolls, or waits beyond the recipe. No raw browser code (`browser_run_code_unsafe` etc.). No skipped steps. No substituting your own selector for one that didn't match. If you walked the recipe clean from step 1 to the last step, report true — *even if the answer ended up being wrong*. (Wrong answer is a separate re-crawl concern; the recipe still executed.)
+**`success: true`** = every step executed AS WRITTEN. Each locator resolved on the first try. No extra clicks, scrolls, or waits beyond the recipe. No raw browser code. No skipped steps. No substituting your own selector for one that didn't match. If you walked the recipe clean from step 1 to the last step, report true — *even if the answer ended up being wrong*. (Wrong answer is a separate re-crawl concern; the recipe still executed.)
 
 **`success: false`** = any hiccup at all. A locator wasn't there. A click did nothing. You retried with a different selector. You fell back to raw browser code. You added scrolls or clicks not in the recipe to recover state. You skipped a step. The recipe took you somewhere unexpected. Report false — *even if you eventually got the user the right answer*. Honest failure reports trigger a re-crawl that fixes the recipe; false `true` silently degrades it for every future agent.
 
@@ -63,8 +61,8 @@ Always populate `evidence.what_happened`, on success AND failure. It describes *
 - ❌ "Found Saan Saan Cafe with 4.9 stars" — task outcome.
 - ❌ "Successfully searched for restaurants in Vancouver" — task summary that hides recipe drift.
 - ✅ "All 6 steps ran as written. No retries." — clean success.
-- ✅ "Steps 1–4 clean. Step 5 (`All filters` button) didn't resolve; tried 3 alternate selectors then used `browser_run_code_unsafe` to click. Step 6 (`Top rated`) never reached — filter wasn't visible after step 5 substitute." — actionable failure.
-- ✅ "Step 3 selector `input[name='q']` matched but typing didn't fire the autocomplete the recipe assumed. Fell back to `fill_form`." — specific hiccup.
+- ✅ "Steps 1–4 clean. Step 5 (`All filters` button) didn't resolve; tried 3 alternate selectors then used raw browser scripting to click. Step 6 (`Top rated`) never reached — filter wasn't visible after step 5 substitute." — actionable failure.
+- ✅ "Step 3 selector `input[name='q']` matched but typing didn't fire the autocomplete the recipe assumed. Fell back to raw form-filling." — specific hiccup.
 
 The first failing step is what the re-crawl targets, so name it specifically. Saying "the recipe worked" or "I got the answer" tells the next crawl nothing.
 
@@ -119,7 +117,7 @@ Fall back when:
 - A step actually fails — not before.
 - The user's intent needs an action the recipe doesn't cover.
 - `ask` returned `status: "site_not_supported"` — Bowmark has no recipes for this domain. Optionally tell the user once.
-- `ask` returned `status: "rate_limited"` — a cap on synthesizing *new* recipes was hit (per-IP daily when anonymous, your account's monthly plan budget when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then. A free API key (see "Higher limits" below) lifts the anonymous per-IP cap to a plan budget.
+- `ask` returned `status: "rate_limited"` — a cap on synthesizing *new* recipes was hit (per-IP daily when anonymous, your account's monthly plan budget when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then.
 - `ask` returned 503 with `embedder_unavailable` or `synth_unavailable` — retry once after the `Retry-After` header, then browse manually.
 
 On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`. You can also avoid the round-trip up front: when the site has multiple surfaces and you already know which one (Google Maps, Google Flights, Stripe API docs, etc.), pass it inline as `site: "google.com/maps"` — the path is honored as an implicit `scopeHint` when it matches a registered surface.
@@ -134,17 +132,3 @@ On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeH
 - Don't report `success: true` because you got the user the right answer. Success means the **recipe** ran clean — every step as written, no retries, no JS-eval fallbacks, no extra clicks.
 - Don't write evidence about what you found ("identified restaurant X"). Write evidence about how the recipe behaved ("steps 1–4 clean, step 5 locator missed").
 - Don't fabricate a value for a `requires_user_input` step — no placeholder password, no guessed card number, no address pulled from earlier context that wasn't explicitly given for this purpose. Ask the user.
-
-## Higher limits (optional)
-
-Bowmark needs **no key** — both the MCP and the HTTP API work anonymously, capped at a per-IP daily limit on *new* recipe synthesis (cached recipes are unlimited). A key swaps that per-IP daily cap for your account's **monthly plan budget** (the free plan covers ~1,000 new-recipe synths/month; paid plans far more). It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
-
-- **Get a key:** sign in at bowmark.ai and mint one from the dashboard.
-- **MCP:** add it to the server's `headers` in your MCP client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request automatically; you don't pass it per call.
-- **HTTP:** if the env var `BOWMARK_API_KEY` is set, send it as `Authorization: Bearer $BOWMARK_API_KEY` (or the `X-Bowmark-Key` header). If it's unset, just call without it.
-
-Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise proceed anonymously.
-
-## When `ask` and `report_outcome` aren't available
-
-If `mcp__bowmark__ask` isn't in your tools list, the user hasn't connected the Bowmark MCP. If you have HTTP fetch tooling, the same operations are available at `POST https://api.bowmark.ai/v1/ask` and `POST https://api.bowmark.ai/v1/outcomes` — identical request bodies, identical response shapes. They work unauthenticated; if `BOWMARK_API_KEY` is in the environment, attach it as `Authorization: Bearer $BOWMARK_API_KEY` for the higher limit (see "Higher limits" above). Otherwise, browse manually for this session and let the user know once that Bowmark could speed it up if they wired the MCP.

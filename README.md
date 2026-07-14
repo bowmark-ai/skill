@@ -19,6 +19,20 @@ claude plugin marketplace add bowmark-ai/plugin && claude plugin install bowmark
 codex plugin marketplace add bowmark-ai/plugin   # then `codex /plugins` to install
 ```
 
+## OpenAI Apps (ChatGPT plugin) variant
+
+The [ChatGPT Apps](https://platform.openai.com/plugins) submission takes a skill as a **ZIP or folder**, and its needs differ slightly from the general skill: the plugin always ships the MCP alongside the skill, and ChatGPT exposes the tools under bare names. So there's a tailored variant, **generated from this same canonical skill** — never hand-maintained:
+
+- **Folder:** [`openai/bowmark/`](./openai/bowmark) — a content mirror of `bowmark/SKILL.md` with the no-MCP HTTP-fallback + "Higher limits" sections dropped (the MCP is always present here), tool names rewritten to bare `ask` / `execute` / `report_outcome`, and Claude-only frontmatter/tool-name references trimmed.
+- **ZIP:** [`openai/bowmark-openai-skill.zip`](./openai/bowmark-openai-skill.zip) — the same folder zipped, ready to drop straight into the ChatGPT "Skills" uploader. A **committed artifact** (not built in CI: the release runner has no `zip` binary), so it rides the mirror to `bowmark-ai/skill` at a stable raw URL like any other file.
+
+Both are **generated** by [`build-openai.mjs`](./build-openai.mjs). Edit `bowmark/SKILL.md`, then regenerate and commit — never edit the `openai/` copies directly (CI's `check:openai` fails a PR whose text mirror is stale):
+
+```sh
+pnpm -F @bowmark/skill sync:openai        # regenerate openai/bowmark/SKILL.md
+pnpm -F @bowmark/skill build:openai-zip    # rebuild openai/bowmark-openai-skill.zip (commit it)
+```
+
 ## License
 
 [MIT](./LICENSE) © Bowmark AI
