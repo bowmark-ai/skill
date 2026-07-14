@@ -101,6 +101,8 @@ When an envelope carries an `executable` block, you have a shortcut past the bro
 
 It's fine to always try `execute` when `executable` is present — the worst case is a `fell_back` that costs you nothing but a retry via the recipe you already have.
 
+**No browser at all?** On a host with no navigation tool (a plain chat, a shell-only agent), you can't walk `ui_procedure` — so the priority is: (1) if `executable` is present, call `execute` — it's the ONLY way to fetch a real answer with no browser, so always prefer it; (2) else fetch the `shortcut` URL (fill its `{name}` slots from your task, URL-encode) with whatever web tool you have — `WebFetch` works for a public GET; (3) else hand the user that direct URL (or the first `navigate` step's URL) to open themselves. A navigation recipe you can't execute is not a dead end — surface the URL.
+
 ## Requesting the logged-in view
 
 Most recipes describe a site's **logged-out** (public) surface — what an anonymous visitor sees. Some tasks only exist behind a login (org settings, billing, an owner-only dashboard). For those, pass the auth facet in `variants`:
