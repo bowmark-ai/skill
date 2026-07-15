@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.15.2 # x-release-please-version
+version: 1.16.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -102,6 +102,8 @@ When an envelope carries an `executable` block, you have a shortcut past the bro
 - **On `{ status: "fell_back", reason }`** — the compiled script didn't run clean. Fall back to executing `ui_procedure` yourself the normal way (and `report_outcome` on THAT execution as usual). `executable` is an optimization, never the only path.
 
 It's fine to always try `execute` when `executable` is present — the worst case is a `fell_back` that costs you nothing but a retry via the recipe you already have.
+
+**When execute is turned off.** A host that can't run remote execution can connect to Bowmark with `?execute=false` on the MCP URL (or pass it to `/v1/ask`). Envelopes then never carry an `executable` block and the `execute` tool isn't offered at all. That's deliberate, not a failure — just run `shortcut`/`ui_procedure` yourself as normal. Absence of `executable` always means "run it yourself," whether it was disabled or simply not available for this recipe.
 
 **No browser at all?** On a host with no navigation tool (a plain chat, a shell-only agent), you can't walk `ui_procedure` — so the priority is: (1) if `executable` is present, call `execute` — it's the ONLY way to fetch a real answer with no browser, so always prefer it; (2) else fetch the `shortcut` URL (fill its `{name}` slots from your task, URL-encode) with whatever web tool you have — `WebFetch` works for a public GET; (3) else hand the user that direct URL (or the first `navigate` step's URL) to open themselves. A navigation recipe you can't execute is not a dead end — surface the URL.
 
