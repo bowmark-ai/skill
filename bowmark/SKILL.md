@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 1.16.0 # x-release-please-version
+version: 1.17.0 # x-release-please-version
 description: |
   Looks up pre-computed navigation recipes for known websites — parameterized
   URLs and short UI procedures verified by prior crawls, so the agent skips
@@ -98,7 +98,7 @@ Execute the recipe exactly as written. The cheatsheet was built from prior crawl
 When an envelope carries an `executable` block, you have a shortcut past the browser entirely: instead of walking `ui_procedure` yourself, call `execute({ script_id: executable.script_id, inputs })` and let Bowmark run the recipe on its own backend.
 
 - **`inputs`** — one value per param in `executable.param_schema` (each `{ name, required, description? }`). Supply the specifics your task needs, same as you would when filling a `shortcut` template or a `fill` step's slot.
-- **On `{ status: "ok", outputs }`** — `outputs` is the live, freshly-fetched data (named per `executable.outputs`). Use it directly; you're done, no browser needed. A clean `execute` needs no `report_outcome`.
+- **On `{ status: "ok", outputs }`** — `outputs` is the live, freshly-fetched data (named per `executable.outputs`). Use it directly; you're done, no browser needed. A clean `execute` needs no `report_outcome`. One caveat: an output that `executable.outputs` marked `kind: "region"` is a bounded TEXT REGION known to CONTAIN the answer (used for obfuscated pages that have no clean value-free field), NOT the literal value — read the final answer out of that text yourself. A plain output (no `kind`) is the literal value.
 - **On `{ status: "fell_back", reason }`** — the compiled script didn't run clean. Fall back to executing `ui_procedure` yourself the normal way (and `report_outcome` on THAT execution as usual). `executable` is an optimization, never the only path.
 
 It's fine to always try `execute` when `executable` is present — the worst case is a `fell_back` that costs you nothing but a retry via the recipe you already have.
