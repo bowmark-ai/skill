@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 2.0.0 # x-release-please-version
+version: 3.0.0 # x-release-please-version
 description: |
   A callable function library for things that only exist behind a live website —
   searching flights across several aggregators, pricing a PC part across
@@ -54,8 +54,6 @@ Plain async JavaScript. `bowmark` is already a global; there is no import step (
 - Real control flow: `if`, loops, `map`/`filter`/`sort`/`slice`, and `Promise.all` for fan-out.
 - `return` a value to get it back, JSON-serialized.
 - `log(...)` records a progress line; the lines come back in `logs`, in order.
-- `talk(message, opts?)` sends a real iMessage out-of-band. `opts.to` targets a named contact (the library lists which contacts exist). Fire-and-forget, and it does not affect the return value.
-- `await pay.card({ amount, merchant? })` issues a **virtual card** capped at `amount` and returns it. It only mints the card — it never completes a purchase.
 - `bowmark` is the **only** I/O. No `fetch`, no `process`, no filesystem, no `import`/`require`.
 - Scripts run in a hard sandbox with CPU, memory and wall-clock limits. Keep them small and deterministic; no infinite loops.
 
@@ -90,7 +88,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "ok"`** — `result` is whatever you returned. Use it.
 - **`status: "error"`** — `error` is the message; `result` is null. The script threw or timed out. Read `error` and `logs` together: the last `log()` line tells you how far it got.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
-- **`logs`** — your `log()` lines in order. **Always check them before telling the user a `talk()` message was sent.** A failed delivery appears as a `⚠️ talk() did NOT deliver` line; if it's there, tell the user it FAILED. `talk()` returning normally is not evidence of delivery.
+- **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.
 - **`traceUrl`** — deep-links this run in the operator's trace inspector.
 
@@ -132,8 +130,6 @@ Fall back to browsing manually when: `get_library` shows no capability for the t
 - Don't invent a function. If it isn't in the library, it isn't callable — everything listed is real, and nothing unlisted is.
 - Don't reach for a provider when the user didn't name a site. You lose dedupe, ranking and failover for nothing.
 - Don't assume a provider returns the capability's shape. Providers return their own types.
-- Don't claim a `talk()` message was delivered without checking `logs`.
-- Don't treat `pay.card` as a purchase. It mints a spend-capped card and stops there.
 - Don't fabricate a value the user has to supply — a password, a card number, a personal detail. Ask them.
 - Don't retry a `needs_user` run before the user has actually signed in. It stops at the same place and costs another run.
 - Don't ask the user for site credentials, ever. The handoff link is how they sign in; you never see or handle a password.
