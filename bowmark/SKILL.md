@@ -1,154 +1,156 @@
 ---
 name: bowmark
-version: 1.17.0 # x-release-please-version
+version: 2.0.0 # x-release-please-version
 description: |
-  Looks up pre-computed navigation recipes for known websites — parameterized
-  URLs and short UI procedures verified by prior crawls, so the agent skips
-  the explore-and-discover step entirely. Use this skill whenever the user
-  mentions a public website by name, asks to navigate, search, look up,
-  open, fill in, click through, or do anything that touches a public web
-  URL — even if the user doesn't explicitly say "find the URL" or "look it
-  up." Also fires on mentions of Playwright, Puppeteer, computer use, or
-  headless browsing, and on any (domain, intent) pair: booking, dashboards,
-  settings, forms, docs, known-app navigation. NOT for: localhost,
-  127.0.0.1, *.local, RFC1918 IPs (10., 192.168., 172.16-31.) or any
-  local-dev target; open-ended web search with no destination ("what's the
-  news"); reading local files; querying JSON APIs that aren't
-  browser-driven; or facts already in training data.
-allowed-tools: mcp__bowmark__ask, mcp__bowmark__report_outcome, mcp__bowmark__execute, WebFetch
+  A callable function library for things that only exist behind a live website —
+  searching flights across several aggregators, pricing a PC part across
+  retailers, and other interaction-gated tasks. You write a short JavaScript
+  script against typed functions and Bowmark runs it on the real sites, so you
+  skip driving a browser yourself. Use this skill whenever a task needs data or
+  an action that lives behind a form, a search, a configurator, or any flow a
+  static fetch can't reach, and whenever the user names a site Bowmark covers.
+  Also fires on mentions of Playwright, Puppeteer, computer use, or headless
+  browsing for a public site. NOT for: localhost, 127.0.0.1, *.local, RFC1918
+  IPs (10., 192.168., 172.16-31.) or any local-dev target; open-ended web search
+  with no destination ("what's the news"); reading local files; plain JSON APIs
+  you can already call; or facts already in training data.
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, WebFetch
 ---
 
 # bowmark
 
-Recipes for getting around known websites. The agent looks up a recipe, executes it, and reports the outcome.
+The web as callable functions. Read the library, write a script, get the result.
 
 ## The loop
 
-1. **Before any browser action**, call `ask({ site, task })`.
-2. On `status: "ok"`, execute `shortcut` (URL template) if present, else `ui_procedure.steps`. Don't snapshot the DOM to verify what the recipe already documents. If the envelope carries an `executable` block, you can instead have Bowmark run the recipe for you — see "Letting Bowmark run it".
-3. After the recipe finished or definitively failed, call `report_outcome({ envelope_id, success })`.
+1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). Omit it to see everything; the catalog is small.
+2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
+3. **Send it to `run({ script })`** and read `{ ok, status, result, logs, error, ms }` — branch on `status`.
 
-The tool descriptions on `ask` and `report_outcome` carry the argument shapes and response schemas. This skill covers behavior and edge cases the tool descriptions can't fit.
+There is no third call. Nothing to report back, no outcome to log — a run either returned a result or it returned an error, and both are already in your hands.
 
-## When to call `report_outcome`
+## Two tiers: capabilities and providers
 
-The report is about the **recipe** — did each step run as written without hiccup? — **not** about whether the user got a good answer. Two different concerns; only the first one is what `report_outcome` measures.
+**Capabilities are the default and usually what you want.** `bowmark.flights.search(...)` is one call that fans out across several aggregators, adapts each one's output into a single normalized shape, dedupes the same physical flight across them, ranks the results, and keeps working when one site is down.
 
-**`success: true`** = every step executed AS WRITTEN. Each locator resolved on the first try. No extra clicks, scrolls, or waits beyond the recipe. No raw browser code (`browser_run_code_unsafe` etc.). No skipped steps. No substituting your own selector for one that didn't match. If you walked the recipe clean from step 1 to the last step, report true — *even if the answer ended up being wrong*. (Wrong answer is a separate re-crawl concern; the recipe still executed.)
+**Providers are the individual sites,** callable directly at `bowmark.providers.<provider>.<fn>(...)` — `bowmark.providers.kayak.search(...)`. They appear in the library only when your query **named a company**, or when the capability has exactly **one** provider behind it (so there is no abstraction to protect).
 
-**`success: false`** = any hiccup at all. A locator wasn't there. A click did nothing. You retried with a different selector. You fell back to raw browser code. You added scrolls or clicks not in the recipe to recover state. You skipped a step. The recipe took you somewhere unexpected. Report false — *even if you eventually got the user the right answer*. Honest failure reports trigger a re-crawl that fixes the recipe; false `true` silently degrades it for every future agent.
+Choose the provider tier when the user asked for that specific site — "check Kayak", "what does Newegg have". Choose the capability otherwise. Naming a site the user didn't name is a downgrade, not a courtesy:
 
-**Quick self-check** before reporting: re-read your tool-call sequence since the recipe started. If it's longer than the recipe's step list, the answer is `false`. If you used raw browser code, the answer is `false`. If your evidence is tempted to say "I switched to…", "the X button wasn't there so…", "I had to scroll…", "I tried clicking 3 different things…", the answer is `false`.
-
-| Situation | Call? | `success` |
+| | Capability | Provider |
 |---|---|---|
-| Every step ran as written; zero extra tool calls; clean walk | ✅ | `true` |
-| Recipe ran clean but the answer was wrong (wrong entity, stale data) | ✅ | `true` *(recipe ran; answer correctness is a separate concern)* |
-| A step failed mid-execution (locator missing, unexpected nav, error) | ✅ | `false` |
-| You retried a step with a different selector or used raw JS to recover | ✅ | `false` |
-| You scrolled / clicked extra to find state the recipe assumed was visible | ✅ | `false` |
-| You abandoned the recipe and finished some other way | ✅ | `false` |
-| You skipped a step because it looked unnecessary or you "knew better" | ✅ | `false` |
-| Recipe triggered an async action (form submit, email); sync response was successful | ✅ | `true` |
-| `ask` returned a miss (no `id` on the envelope) | ❌ | — |
-| User interrupted before the recipe reached its final step | ❌ | — |
-| You consulted the envelope but never executed any step | ❌ | — |
-| Task is still waiting on user input you don't have | ❌ | — (defer until you have closure) |
-| You called `ask` multiple times in one task | ✅ once | per the row that matches |
+| Sites covered | several, in one call | exactly one |
+| Result shape | one normalized type | that site's own native shape |
+| Duplicate results | deduped across sites | not deduped |
+| A site breaks | routed around | your script fails |
 
-### `evidence` — describe the recipe, not the task
+A provider returns its **own** types, documented under its own heading in the library. Don't assume a provider's row looks like the capability's — read the types you were given.
 
-Always populate `evidence.what_happened`, on success AND failure. It describes **how the recipe behaved**, not what you found for the user. The crawler reads it to decide what to re-investigate; a task summary tells it nothing.
+## The language
 
-- ❌ "Found Saan Saan Cafe with 4.9 stars" — task outcome.
-- ❌ "Successfully searched for restaurants in Vancouver" — task summary that hides recipe drift.
-- ✅ "All 6 steps ran as written. No retries." — clean success.
-- ✅ "Steps 1–4 clean. Step 5 (`All filters` button) didn't resolve; tried 3 alternate selectors then used `browser_run_code_unsafe` to click. Step 6 (`Top rated`) never reached — filter wasn't visible after step 5 substitute." — actionable failure.
-- ✅ "Step 3 selector `input[name='q']` matched but typing didn't fire the autocomplete the recipe assumed. Fell back to `fill_form`." — specific hiccup.
+Plain async JavaScript. `bowmark` is already a global; there is no import step (a leading `import { bowmark } from "bowmark"` is tolerated and stripped, but it does nothing).
 
-The first failing step is what the re-crawl targets, so name it specifically. Saying "the recipe worked" or "I got the answer" tells the next crawl nothing.
+- Every capability and provider function is **async** — always `await`.
+- Real control flow: `if`, loops, `map`/`filter`/`sort`/`slice`, and `Promise.all` for fan-out.
+- `return` a value to get it back, JSON-serialized.
+- `log(...)` records a progress line; the lines come back in `logs`, in order.
+- `talk(message, opts?)` sends a real iMessage out-of-band. `opts.to` targets a named contact (the library lists which contacts exist). Fire-and-forget, and it does not affect the return value.
+- `await pay.card({ amount, merchant? })` issues a **virtual card** capped at `amount` and returns it. It only mints the card — it never completes a purchase.
+- `bowmark` is the **only** I/O. No `fetch`, no `process`, no filesystem, no `import`/`require`.
+- Scripts run in a hard sandbox with CPU, memory and wall-clock limits. Keep them small and deterministic; no infinite loops.
 
-## Executing the recipe — follow it verbatim
+Write a plain async body, not a wrapping function:
 
-Execute the recipe exactly as written. The cheatsheet was built from prior crawls of this site; deviating from it produces worse results than following it does. If you find yourself wanting to "check first" or "try something different", that's a signal the recipe is wrong — execute as written, let it fail, and let `report_outcome` capture the failure for the re-crawl.
+```js
+const flights = await bowmark.flights.search({ from: "SFO", to: "JFK", depart: "2026-09-01" });
+return flights.sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9))[0];
+```
 
-**Don't take screenshots while executing.** Screenshots are justified only after a step actually fails, to debug what went wrong. Reading the DOM is allowed only for the one element each step references — never to verify what the recipe already documents.
+## Composition is the point
 
-**`shortcut`** — fill each `{name}` placeholder in `template` with the value **from your task**, URL-encode, then navigate. Each entry in `shortcut.parameters` is a slot: `{ name, description, format? }`. It describes *what* to supply ("the destination", "Origin to Destination on Date returning Date") — it does NOT contain a pre-filled value, because the recipe is cached across many different tasks. Read the `description`/`format`, then substitute the specifics your task needs (keep qualifier words like "top rated"/"cheapest" if the slot's description says ranking honors them). If `shortcut` is `null` (the one envelope field that's explicitly nulled rather than omitted), skip to `ui_procedure`.
+One script, several calls, combined however the task needs. This is the thing you cannot do by driving a browser step by step, and it's why a script beats a sequence of tool calls.
 
-**`ui_procedure.steps`** — each step has:
-- `action` — a verb string. Common values: `navigate`, `click`, `type`, `fill`, `scroll`, `read`, `verify`, `select`, `submit`, `use_feature`. Not an enum — read `action` together with `locator`/`value`/`url` to decide what to do.
-- `description` — **optional**. Present only when `action` + `locator` would be ambiguous on its own (e.g. clicking an unnamed search result). When present, it's the source of truth for the step's intent; when absent, the action+locator+value tuple is self-explanatory.
-- `url` — present on `navigate` steps.
-- `locator` — the target element. Try interpretations in order: CSS selector (if it looks like one — `button#submit`, `[data-test=...]`), then visible text, then aria-label.
-- `value` — what to type, for `fill` / `type` steps. May be a generic slot ("the destination") rather than a literal — supply the specifics your task needs, same as for `shortcut` parameters.
-- `precondition` — state that must be true before this step is safe. Check only what's named; don't snapshot the whole page.
-- `irreversible: true` — submits a form, sends an email, charges a card, etc. **Confirm with the user before executing.**
-- `requires_user_input: true` — the step's value can only come from the end user: a password/login credential, payment/card details, or personal contact/identity data. **STOP and ask the user for the value — never invent, guess, or reuse a value from elsewhere in the conversation.** Only the requesting human has it.
-- `mechanism_notes` — rich how-it-works detail captured by deep crawls. Read these when present.
+```js
+// Sweep a date range in parallel, then pick the cheapest across all of them.
+const dates = ["2026-09-01", "2026-09-02", "2026-09-03"];
+const runs = await Promise.all(
+  dates.map((depart) => bowmark.flights.search({ from: "SFO", to: "JFK", depart })),
+);
+return runs.flat().sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9)).slice(0, 5);
+```
 
-**`verify_more`** — top-level boolean, `true` only on low-confidence envelopes. When present, do one cheap sanity check (page title plausible?) before committing to the recipe. When absent, execute directly.
+Each result carries the query it came from (a flight result carries its `date`), so you can tell merged runs apart.
 
-**`variants_assumed`** — top-level object, present only when you requested a non-empty behavior facet. It echoes back the facets you ASKED for (most importantly `{ auth_state, role }`), so it confirms *what view you requested* — NOT that a logged-in recipe was actually found. Bowmark soft-prefers variant-matching data but falls back to the best available, so an `auth_state: "logged_in"` request can still return a recipe drawing on public notes when the signed-in surface wasn't mapped. Treat it as a record of your request; rely on the recipe itself + the top-level `verify_more` flag for trust, and fall back to normal browsing if a step doesn't match the signed-in UI.
+## Reading the response
 
-**`executable`** — top-level object, present only on some `ok` envelopes: `{ script_id, kind: "remote", param_schema, outputs, last_verified? }`. It means Bowmark has a precompiled, verified script for this exact recipe and can run it FOR you. Absent = nothing changes, run the recipe yourself. See below.
+`run` returns `{ ok, status, result, logs, error, ms }`, plus `trace` and `traceUrl`.
 
-## Letting Bowmark run it
+**Branch on `status`, not on `ok`** — it is `ok` | `error` | `needs_user`, and the third one is not a failure.
 
-When an envelope carries an `executable` block, you have a shortcut past the browser entirely: instead of walking `ui_procedure` yourself, call `execute({ script_id: executable.script_id, inputs })` and let Bowmark run the recipe on its own backend.
+- **`status: "ok"`** — `result` is whatever you returned. Use it.
+- **`status: "error"`** — `error` is the message; `result` is null. The script threw or timed out. Read `error` and `logs` together: the last `log()` line tells you how far it got.
+- **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
+- **`logs`** — your `log()` lines in order. **Always check them before telling the user a `talk()` message was sent.** A failed delivery appears as a `⚠️ talk() did NOT deliver` line; if it's there, tell the user it FAILED. `talk()` returning normally is not evidence of delivery.
+- **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.
+- **`traceUrl`** — deep-links this run in the operator's trace inspector.
 
-- **`inputs`** — one value per param in `executable.param_schema` (each `{ name, required, description? }`). Supply the specifics your task needs, same as you would when filling a `shortcut` template or a `fill` step's slot.
-- **On `{ status: "ok", outputs }`** — `outputs` is the live, freshly-fetched data (named per `executable.outputs`). Use it directly; you're done, no browser needed. A clean `execute` needs no `report_outcome`. One caveat: an output that `executable.outputs` marked `kind: "region"` is a bounded TEXT REGION known to CONTAIN the answer (used for obfuscated pages that have no clean value-free field), NOT the literal value — read the final answer out of that text yourself. A plain output (no `kind`) is the literal value.
-- **On `{ status: "fell_back", reason }`** — the compiled script didn't run clean. Fall back to executing `ui_procedure` yourself the normal way (and `report_outcome` on THAT execution as usual). `executable` is an optimization, never the only path.
+## When a site needs the user signed in
 
-It's fine to always try `execute` when `executable` is present — the worst case is a `fell_back` that costs you nothing but a retry via the recipe you already have.
+`status: "needs_user"` means a capability reached a page that requires a login. **Nothing about your script is wrong**, and re-sending it before the user has signed in will stop at exactly the same place and cost another run.
 
-**When execute is turned off.** A host that can't run remote execution can connect to Bowmark with `?execute=false` on the MCP URL (or pass it to `/v1/ask`). Envelopes then never carry an `executable` block and the `execute` tool isn't offered at all. That's deliberate, not a failure — just run `shortcut`/`ui_procedure` yourself as normal. Absence of `executable` always means "run it yourself," whether it was disabled or simply not available for this recipe.
+What comes back:
 
-**No browser at all?** On a host with no navigation tool (a plain chat, a shell-only agent), you can't walk `ui_procedure` — so the priority is: (1) if `executable` is present, call `execute` — it's the ONLY way to fetch a real answer with no browser, so always prefer it; (2) else fetch the `shortcut` URL (fill its `{name}` slots from your task, URL-encode) with whatever web tool you have — `WebFetch` works for a public GET; (3) else hand the user that direct URL (or the first `navigate` step's URL) to open themselves. A navigation recipe you can't execute is not a dead end — surface the URL.
+- **`needs`** — one entry per site, each `{ capability, provider, providerTitle, kind }`. `providerTitle` is what to call the site when you talk to the user.
+- **`meta.handoff`** — `{ url, expiresAt, ref }`. `url` is a single-use link that expires (usually in minutes).
 
-## Requesting the logged-in view
+What to do, in order:
 
-Most recipes describe a site's **logged-out** (public) surface — what an anonymous visitor sees. Some tasks only exist behind a login (org settings, billing, an owner-only dashboard). For those, pass the auth facet in `variants`:
+1. Give the user the `url` and name the sites it covers. One link covers every site the script needs.
+2. **Wait.** Don't poll, don't retry, don't try a different site instead.
+3. When they say they're done, send **the same script again, unchanged**.
 
-- `ask({ site, task, variants: { auth_state: "logged_in" } })` — request the signed-in view.
-- Add `role` when the privilege level changes what's available — `{ auth_state: "logged_in", role: "owner" }` (also `"admin"`, `"member"`, etc.; the vocabulary is per-site). An owner sees settings a member doesn't; the role narrows the recipe to that persona's surface.
-- Omit `variants` entirely (or pass `auth_state: "logged_out"`) for the default public view. With no `auth_state`, you always get the logged-out recipe — behavior is identical to not passing `variants`.
+What never to do: ask the user for a password, offer to sign in on their behalf, or route around the login by scraping something else. The link opens a browser they drive themselves; Bowmark stores the resulting session, never their credentials.
 
-The facets ride inside the existing `variants` object — there's no separate argument. They affect the cache key, and the facets you requested come back on the envelope's `variants_assumed` (a record of your request, not proof a logged-in recipe was found). Bowmark returns the logged-in recipe only if a prior crawl signed in and mapped that surface; otherwise you fall through to the logged-out recipe (or a miss). Either way, **you** still have to be signed into the site in your own browser session to execute a logged-in recipe — Bowmark supplies the recipe, not the credentials.
+If the message says logged-in runs need an API key, that's the fix — tell the user to add a Bowmark API key to the MCP connection's `Authorization: Bearer` header (they mint one at bowmark.ai). Retrying won't help.
 
-## Falling back to manual browsing
+## When a run fails
 
-Fall back when:
-- A step actually fails — not before.
-- The user's intent needs an action the recipe doesn't cover.
-- `ask` returned `status: "site_not_supported"` — Bowmark has no recipes for this domain. Optionally tell the user once.
-- `ask` returned `status: "rate_limited"` — a cap on synthesizing *new* recipes was hit (per-IP daily when anonymous, your account's monthly plan budget when a key is attached). Cached and already-known recipes keep answering, so it only bites first-time tasks. Don't retry-spam (it won't clear until `error.retry_after` seconds elapse); browse manually for capped tasks until then. A free API key (see "Higher limits" below) lifts the anonymous per-IP cap to a plan budget.
-- `ask` returned 503 with `embedder_unavailable` or `synth_unavailable` — retry once after the `Retry-After` header, then browse manually.
+Read the error before retrying. The three classes need different responses:
 
-On `status: "ambiguous_scope"`, don't fall back yet — retry `ask` with `scopeHint` set to one of `error.scope_options[].pattern`. You can also avoid the round-trip up front: when the site has multiple surfaces and you already know which one (Google Maps, Google Flights, Stripe API docs, etc.), pass it inline as `site: "google.com/maps"` — the path is honored as an implicit `scopeHint` when it matches a registered surface.
+- **A script error** (a `TypeError`, a bad argument shape) — your script is wrong. Re-read the types in the library and fix it. Re-running unchanged will fail identically.
+- **A timeout** — the script was too big for one run. Split it: fewer parallel calls, or a narrower query.
+- **A site failure inside a capability** — the capability already routed around it where it could. If the whole call failed, the result genuinely isn't available right now; say so rather than inventing one.
+
+If you pinned a **provider** and it failed, retry through the **capability** instead — it covers the same ground across other sites. That's the tradeoff you took when you pinned.
+
+Fall back to browsing manually when: `get_library` shows no capability for the task, the user needs an action nothing in the library covers, or a run failed for a site-side reason and the answer is time-critical. Bowmark covering nothing for a task is a normal outcome, not an error — the library is explicit about what exists, so check it rather than guessing.
 
 ## Don'ts
 
-- Don't take screenshots while executing a recipe. Screenshots are for debugging failures, not verifying success.
-- Don't put URLs in the `task` argument. Bowmark wants intent, not destination.
-- Don't call `ask` for localhost or RFC1918 IPs. No recipes exist and never will.
-- Don't validate the recipe before executing. If the cheatsheet says click X, click X.
-- Don't skip `report_outcome` after executing a recipe — silence is how recipes degrade.
-- Don't report `success: true` because you got the user the right answer. Success means the **recipe** ran clean — every step as written, no retries, no JS-eval fallbacks, no extra clicks.
-- Don't write evidence about what you found ("identified restaurant X"). Write evidence about how the recipe behaved ("steps 1–4 clean, step 5 locator missed").
-- Don't fabricate a value for a `requires_user_input` step — no placeholder password, no guessed card number, no address pulled from earlier context that wasn't explicitly given for this purpose. Ask the user.
+- Don't call `get_library` with a URL. Pass a task or a company name.
+- Don't call it for localhost or RFC1918 addresses. Nothing there is covered and nothing will be.
+- Don't invent a function. If it isn't in the library, it isn't callable — everything listed is real, and nothing unlisted is.
+- Don't reach for a provider when the user didn't name a site. You lose dedupe, ranking and failover for nothing.
+- Don't assume a provider returns the capability's shape. Providers return their own types.
+- Don't claim a `talk()` message was delivered without checking `logs`.
+- Don't treat `pay.card` as a purchase. It mints a spend-capped card and stops there.
+- Don't fabricate a value the user has to supply — a password, a card number, a personal detail. Ask them.
+- Don't retry a `needs_user` run before the user has actually signed in. It stops at the same place and costs another run.
+- Don't ask the user for site credentials, ever. The handoff link is how they sign in; you never see or handle a password.
 
-## Higher limits (optional)
+## Higher limits, and logged-in sites
 
-Bowmark needs **no key** — both the MCP and the HTTP API work anonymously, capped at a per-IP daily limit on *new* recipe synthesis (cached recipes are unlimited). A key swaps that per-IP daily cap for your account's **monthly plan budget** (the free plan covers ~1,000 new-recipe synths/month; paid plans far more). It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
+Bowmark needs **no key** for public sites — the MCP works anonymously, capped per IP per day. A key swaps that cap for your account's monthly plan budget. It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
+
+**A key IS required for any site that needs a login.** Bowmark won't hold a site session against an anonymous caller, because anonymous callers are identified only by IP and user-agent and several people can share those. Without a key, a script that needs a login comes back `needs_user` saying so.
 
 - **Get a key:** sign in at bowmark.ai and mint one from the dashboard.
-- **MCP:** add it to the server's `headers` in your MCP client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request automatically; you don't pass it per call.
-- **HTTP:** if the env var `BOWMARK_API_KEY` is set, send it as `Authorization: Bearer $BOWMARK_API_KEY` (or the `X-Bowmark-Key` header). If it's unset, just call without it.
+- **MCP:** add it to the server's `headers` in your client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request; you never pass it per call.
 
 Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise proceed anonymously.
 
-## When `ask` and `report_outcome` aren't available
+## When the tools aren't available
 
-If `mcp__bowmark__ask` isn't in your tools list, the user hasn't connected the Bowmark MCP. If you have HTTP fetch tooling, the same operations are available at `POST https://api.bowmark.ai/v1/ask` and `POST https://api.bowmark.ai/v1/outcomes` — identical request bodies, identical response shapes. They work unauthenticated; if `BOWMARK_API_KEY` is in the environment, attach it as `Authorization: Bearer $BOWMARK_API_KEY` for the higher limit (see "Higher limits" above). Otherwise, browse manually for this session and let the user know once that Bowmark could speed it up if they wired the MCP.
+If `mcp__bowmark__get_library` isn't in your tools list, the user hasn't connected the Bowmark MCP. Browse manually for this session, and mention once that Bowmark could have run it.
+
+If you are on a host that saw an older Bowmark and calls `ask`, `report_outcome`, `get_dsl` or `run_script`: those are gone. `get_dsl` is now `get_library` and `run_script` is now `run`; `ask` and `report_outcome` have no replacement, because Bowmark returns callable functions rather than recipes for you to execute. Calling a retired name returns a message saying exactly that — it is not a transport failure, so don't retry it.
