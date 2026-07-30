@@ -81,7 +81,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 
 ## Reading the response
 
-`run` returns `{ ok, status, result, logs, error, ms }`, plus `trace` and `traceUrl`.
+`run` returns `{ ok, status, result, logs, error, ms }`, plus `trace`.
 
 **Branch on `status`, not on `ok`** — it is `ok` | `error` | `needs_user`, and the third one is not a failure.
 
@@ -90,7 +90,6 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.
-- **`traceUrl`** — deep-links this run in the operator's trace inspector.
 
 ## When a site needs the user signed in
 
