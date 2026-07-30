@@ -1,18 +1,20 @@
 ---
 name: bowmark
 description: |
-  A callable function library for things that only exist behind a live website —
-  searching flights across several aggregators, pricing a PC part across
-  retailers, and other interaction-gated tasks. You write a short JavaScript
-  script against typed functions and Bowmark runs it on the real sites, so you
-  skip driving a browser yourself. Use this skill whenever a task needs data or
-  an action that lives behind a form, a search, a configurator, or any flow a
-  static fetch can't reach, and whenever the user names a site Bowmark covers.
-  Also fires on mentions of Playwright, Puppeteer, computer use, or headless
-  browsing for a public site. NOT for: localhost, 127.0.0.1, *.local, RFC1918
-  IPs (10., 192.168., 172.16-31.) or any local-dev target; open-ended web search
-  with no destination ("what's the news"); reading local files; plain JSON APIs
-  you can already call; or facts already in training data.
+  Do things on live websites: look up current prices, check real availability or
+  stock, search a site, get a quote or a fare, drive a configurator, start a
+  booking, or pull anything that only exists behind a form, a filter, or a login.
+  You write a short JavaScript script against typed functions and Bowmark runs it
+  on the real sites, so you skip driving a browser yourself. Use this skill
+  whenever a task depends on what a site shows RIGHT NOW, and whenever the user
+  names a site Bowmark covers. Checking is cheap: `get_library` is one read-only
+  call that touches no site, and an unrecognized query returns the whole catalog
+  rather than an error, so the check never dead-ends. Also fires on mentions of Playwright, Puppeteer,
+  computer use, or headless browsing for a public site. NOT for: localhost,
+  127.0.0.1, *.local, RFC1918 IPs (10., 192.168., 172.16-31.) or any local-dev
+  target; open-ended web search with no destination ("what's the news"); reading
+  local files; plain JSON APIs you can already call; or facts already in training
+  data.
 ---
 
 # bowmark

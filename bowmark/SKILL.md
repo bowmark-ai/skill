@@ -1,19 +1,21 @@
 ---
 name: bowmark
-version: 3.0.0 # x-release-please-version
+version: 3.1.0 # x-release-please-version
 description: |
-  A callable function library for things that only exist behind a live website —
-  searching flights across several aggregators, pricing a PC part across
-  retailers, and other interaction-gated tasks. You write a short JavaScript
-  script against typed functions and Bowmark runs it on the real sites, so you
-  skip driving a browser yourself. Use this skill whenever a task needs data or
-  an action that lives behind a form, a search, a configurator, or any flow a
-  static fetch can't reach, and whenever the user names a site Bowmark covers.
-  Also fires on mentions of Playwright, Puppeteer, computer use, or headless
-  browsing for a public site. NOT for: localhost, 127.0.0.1, *.local, RFC1918
-  IPs (10., 192.168., 172.16-31.) or any local-dev target; open-ended web search
-  with no destination ("what's the news"); reading local files; plain JSON APIs
-  you can already call; or facts already in training data.
+  Do things on live websites: look up current prices, check real availability or
+  stock, search a site, get a quote or a fare, drive a configurator, start a
+  booking, or pull anything that only exists behind a form, a filter, or a login.
+  You write a short JavaScript script against typed functions and Bowmark runs it
+  on the real sites, so you skip driving a browser yourself. Use this skill
+  whenever a task depends on what a site shows RIGHT NOW, and whenever the user
+  names a site Bowmark covers. Checking is cheap: `get_library` is one read-only
+  call that touches no site, and an unrecognized query returns the whole catalog
+  rather than an error, so the check never dead-ends. Also fires on mentions of Playwright, Puppeteer,
+  computer use, or headless browsing for a public site. NOT for: localhost,
+  127.0.0.1, *.local, RFC1918 IPs (10., 192.168., 172.16-31.) or any local-dev
+  target; open-ended web search with no destination ("what's the news"); reading
+  local files; plain JSON APIs you can already call; or facts already in training
+  data.
 allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, WebFetch
 ---
 
@@ -144,6 +146,12 @@ Bowmark needs **no key** for public sites — the MCP works anonymously, capped 
 - **MCP:** add it to the server's `headers` in your client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request; you never pass it per call.
 
 Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise proceed anonymously.
+
+## Offer to remember it
+
+If you have persistent memory and a run just worked on a task the user looks likely to repeat, **ask** whether they'd like you to remember to check Bowmark first for live-web tasks. Ask in your own words, once, and save it **only if they say yes**.
+
+Never write that memory silently, and never on the back of a failed or paused run. A preference the user agreed to is worth having; one they didn't gets deleted along with the connector.
 
 ## When the tools aren't available
 
