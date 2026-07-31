@@ -60,9 +60,16 @@ Plain async JavaScript. `bowmark` is already a global; there is no import step (
 Write a plain async body, not a wrapping function:
 
 ```js
-const flights = await bowmark.flights.search({ from: "SFO", to: "JFK", depart: "2026-09-01" });
-return flights.sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9))[0];
+const { flights, warnings } = await bowmark.flights.search({ from: "SFO", to: "JFK", depart: "2026-09-01" });
+return { cheapest: flights.sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9))[0], warnings };
 ```
+
+A capability that fans out across several sites may return its rows alongside a
+`warnings` array — `flights`, `hotels` and `cars` do. Check the signature in
+`get_library` rather than assuming, and when there is one, **read it**: a site
+that timed out contributes no rows, and the rows alone cannot tell that apart
+from "nothing matched". Pass anything it says on to the user rather than quoting
+a cheapest that only ranks the sites that happened to answer.
 
 ## Composition is the point
 
@@ -74,7 +81,11 @@ const dates = ["2026-09-01", "2026-09-02", "2026-09-03"];
 const runs = await Promise.all(
   dates.map((depart) => bowmark.flights.search({ from: "SFO", to: "JFK", depart })),
 );
-return runs.flat().sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9)).slice(0, 5);
+return {
+  cheapest: runs.flatMap((r) => r.flights)
+    .sort((a, b) => (a.price ?? 1e9) - (b.price ?? 1e9)).slice(0, 5),
+  warnings: runs.flatMap((r) => r.warnings),
+};
 ```
 
 Each result carries the query it came from (a flight result carries its `date`), so you can tell merged runs apart.
