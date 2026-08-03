@@ -9,7 +9,7 @@ description: |
   whenever a task depends on what a site shows RIGHT NOW, and whenever the user
   names a site Bowmark covers. Checking is cheap: `get_library` is one read-only
   call that touches no site, and an unrecognized query returns a one-line index of
-  the whole library rather than an error, so the check never dead-ends. Also fires on mentions of Playwright, Puppeteer,
+  the library rather than an error, so the check never dead-ends. Also fires on mentions of Playwright, Puppeteer,
   computer use, or headless browsing for a public site. NOT for: localhost,
   127.0.0.1, *.local, RFC1918 IPs (10., 192.168., 172.16-31.) or any local-dev
   target; open-ended web search with no destination ("what's the news"); reading
@@ -23,7 +23,7 @@ The web as callable functions. Read the library, write a script, get the result.
 
 ## The loop
 
-1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index of the whole library instead, so call again with the name of whichever entry fits before writing a script.
+1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
 3. **Send it to `run({ script })`** and read `{ ok, status, result, logs, error, ms }` — branch on `status`.
 
