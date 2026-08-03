@@ -94,10 +94,11 @@ Each result carries the query it came from (a flight result carries its `date`),
 
 `run` returns `{ ok, status, result, logs, error, ms }`, plus `trace`.
 
-**Branch on `status`, not on `ok`** — it is `ok` | `error` | `needs_user`, and the third one is not a failure.
+**Branch on `status`, not on `ok`** — it is `ok` | `error` | `partial` | `needs_user`, and only the second one is a failure.
 
 - **`status: "ok"`** — `result` is whatever you returned. Use it.
 - **`status: "error"`** — `error` is the message; `result` is null. The script threw or timed out. Read `error` and `logs` together: the last `log()` line tells you how far it got.
+- **`status: "partial"`** — the script RAN and `result` is real, but some of what it called never answered, so the answer is narrower than you asked for. `ok` is still `true`. `incomplete.summary` says what happened; `incomplete.failures` names each call that threw and what the site said; `incomplete.degraded` names each call that answered while reporting its own results thin. **Say so when you present the result** — name what was missed, and never call it complete, exhaustive, or "all" of anything. Re-running rarely helps; a site refusing us refuses us again.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.

@@ -1,6 +1,6 @@
 # bowmark skill
 
-The skill for [Bowmark](https://bowmark.ai) — pre-computed navigation recipes for known websites, so the agent doesn't have to discover the page structure from scratch.
+The skill for [Bowmark](https://bowmark.ai) — the web as callable functions. The agent reads a typed function library, writes a short script against it, and Bowmark runs it on the live sites.
 
 ```sh
 npx skills add bowmark-ai/skill
