@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.2.0 # x-release-please-version
+version: 5.3.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__register, WebFetch
 ---
 
 # bowmark
@@ -155,10 +155,19 @@ Bowmark needs **no key** for public sites — the MCP works anonymously, capped 
 
 **A key IS required for any site that needs a login.** Bowmark won't hold a site session against an anonymous caller, because anonymous callers are identified only by IP and user-agent and several people can share those. Without a key, a script that needs a login comes back `needs_user` saying so.
 
-- **Get a key:** sign in at bowmark.ai and mint one from the dashboard.
+**`register({})` mints one, and you can call it yourself.** Every argument is optional, so a bare `register({})` is a complete call — there is nothing to ask the user for first, no sign-in, and no browser step. Reach for it when a run is refused for hitting the anonymous cap, when you expect more than a handful of calls, or when the user asks for an account. Where the connection allows it the new allowance applies immediately (`activeNow: true` in the response) and your next `run` is already on it.
+
+- `email` is OPTIONAL and is **not an API credential** — no key depends on it. But passing one **creates a Bowmark sign-in for that address**, so the user can sign in with an emailed code and manage the account. Pass it only if the user gave you one. **Never invent or placeholder one** — a made-up address is somebody else's mailbox.
+- **If you pass an email, say so to your user:** that address gets occasional Bowmark product and changelog email by default. `newsletter: false` declines, and every message carries a one-click unsubscribe. With no email there is nothing to subscribe and nothing to mention.
+- `promotions` is a separate consent and is off unless you set it. Set it **only** if the user said yes to promotional email. Don't infer consent.
+- **Afterwards, show the user `apiKey`.** It's returned once and can't be recovered — tell them to save it and add it to their client config so it works in future sessions. Don't write it to a file or a commit.
+- **Then tell them how to reach the account as a person.** If `signInUrl` came back, that's the way in: sign in there with that email, get a code, land in this account, nothing to save — and `claimUrl` is only a backup for a wrong address. If `signInUrl` is null, `claimUrl` is the **only** door; show it and say `claimExpiresAt` is the date it stops working.
+- Re-registering isn't how you get a second key: a used address is refused, and there's a per-network cap. If you already hold a key, present that instead.
+
+- **Or get one by hand:** sign in at bowmark.ai and mint one from the dashboard.
 - **MCP:** add it to the server's `headers` in your client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request; you never pass it per call.
 
-Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise proceed anonymously.
+Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment, or mint one with `register`; otherwise proceed anonymously.
 
 ## Offer to remember it
 
