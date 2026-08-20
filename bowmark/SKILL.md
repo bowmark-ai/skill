@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.3.0 # x-release-please-version
+version: 5.4.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a

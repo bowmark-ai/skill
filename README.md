@@ -19,6 +19,19 @@ claude plugin marketplace add bowmark-ai/plugin && claude plugin install bowmark
 codex plugin marketplace add bowmark-ai/plugin   # then `codex /plugins` to install
 ```
 
+## Tools
+
+<!-- Several MCP directories auto-extract a server's tool list from exactly this
+     heading in the repo README — mcp.so says so on the listing itself, and ours
+     read "No tools detected" until this section existed. Keep the names and the
+     order matching apps/api/src/routes/mcp.ts. -->
+
+| Tool | What it does |
+|---|---|
+| `get_library` | Read the typed function library for a task or a site. Read-only, touches no site, and an unrecognized query returns the index rather than an error. |
+| `run` | Execute a short async JavaScript script against the live sites and return `{ ok, result, logs, error, ms }`. |
+| `register` | Create a free Bowmark account and return an API key. Every argument is optional; `register({})` is a complete call. |
+
 ## OpenAI Apps (ChatGPT plugin) variant
 
 The [ChatGPT Apps](https://platform.openai.com/plugins) submission takes a skill as a **ZIP or folder**, and its needs differ slightly from the general skill: the plugin always ships the MCP alongside the skill, and ChatGPT exposes the tools under bare names. So there's a tailored variant, **generated from this same canonical skill** — never hand-maintained:
