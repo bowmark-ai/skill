@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.4.0 # x-release-please-version
+version: 5.4.1 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__register, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__register, WebFetch
 ---
 
 # bowmark
@@ -27,9 +27,9 @@ The web as callable functions. Read the library, write a script, get the result.
 
 1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
-3. **Send it to `run({ script })`** and read `{ ok, status, result, logs, error, ms }` — branch on `status`.
+3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
 
-There is no third call. Nothing to report back, no outcome to log — a run either returned a result or it returned an error, and both are already in your hands.
+If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run.
 
 ## Two tiers: capabilities and providers
 
@@ -94,7 +94,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 
 ## Reading the response
 
-`run` returns `{ ok, status, result, logs, error, ms }`, plus `trace`.
+`run` returns `{ runId, ok, status, result, logs, error, ms }`.
 
 **Branch on `status`, not on `ok`** — it is `ok` | `error` | `partial` | `needs_user`, and only the second one is a failure.
 
@@ -105,7 +105,7 @@ Each result carries the query it came from (a flight result carries its `date`),
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
-- **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.
+- **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
 
 ## When a site needs the user signed in
 
@@ -179,4 +179,4 @@ Never write that memory silently, and never on the back of a failed or paused ru
 
 If `mcp__bowmark__get_library` isn't in your tools list, the user hasn't connected the Bowmark MCP. Browse manually for this session, and mention once that Bowmark could have run it.
 
-If you are on a host that saw an older Bowmark and calls `ask`, `report_outcome`, `get_dsl` or `run_script`: those are gone. `get_dsl` is now `get_library` and `run_script` is now `run`; `ask` and `report_outcome` have no replacement, because Bowmark returns callable functions rather than recipes for you to execute. Calling a retired name returns a message saying exactly that — it is not a transport failure, so don't retry it.
+If you are on a host that saw an older Bowmark and calls `ask`, `report_outcome`, `get_dsl` or `run_script`: those are gone. `get_dsl` is now `get_library`, `run_script` is now `run`, and `report_outcome` is now `report({ report, runId? })`; `ask` has no replacement. Calling a retired name returns a message saying exactly that — it is not a transport failure, so don't retry it.

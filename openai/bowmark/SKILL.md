@@ -25,9 +25,9 @@ The web as callable functions. Read the library, write a script, get the result.
 
 1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
-3. **Send it to `run({ script })`** and read `{ ok, status, result, logs, error, ms }` — branch on `status`.
+3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
 
-There is no third call. Nothing to report back, no outcome to log — a run either returned a result or it returned an error, and both are already in your hands.
+If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run.
 
 ## Two tiers: capabilities and providers
 
@@ -92,7 +92,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 
 ## Reading the response
 
-`run` returns `{ ok, status, result, logs, error, ms }`, plus `trace`.
+`run` returns `{ runId, ok, status, result, logs, error, ms }`.
 
 **Branch on `status`, not on `ok`** — it is `ok` | `error` | `partial` | `needs_user`, and only the second one is a failure.
 
@@ -103,7 +103,7 @@ Each result carries the query it came from (a flight result carries its `date`),
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
-- **`trace`** — the receipt: which capabilities you called and which providers each fanned out to, as `[{ kind:'capability', capability:'flights', method:'search', ms }, { kind:'provider', capability:'flights', provider:'google_flights', fn:'search', results, status, ms }, …]`. A direct provider call appears with an empty `capability`, because nothing routed it.
+- **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
 
 ## When a site needs the user signed in
 

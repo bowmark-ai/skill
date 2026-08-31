@@ -9,7 +9,7 @@
 //   1. drops the trailing no-MCP HTTP-fallback + "Higher limits" sections — the
 //      MCP is always present here, so neither applies (and ChatGPT can't freely
 //      POST to the HTTP API anyway);
-//   2. rewrites `mcp__bowmark__ask` → `ask` etc. to the bare tool names;
+//   2. rewrites `mcp__bowmark__*` → bare tool names to match ChatGPT's MCP surface;
 //   3. trims frontmatter fields OpenAI doesn't read (version, allowed-tools),
 //      and generalizes Claude-Code-only browser tool names used as examples.
 //
@@ -35,9 +35,9 @@ function transform(src) {
   //    it to EOF removes both. The variant ends after "## Don'ts".
   const cut = src.indexOf("\n## Higher limits");
   let out = (cut === -1 ? src : `${src.slice(0, cut)}\n`).replace(/\n+$/, "\n");
-  // 2) bare tool names — ChatGPT surfaces ask/execute/report_outcome without the
+  // 2) bare tool names — ChatGPT surfaces the live MCP tools without the
   //    Claude `mcp__bowmark__` prefix.
-  out = out.replace(/mcp__bowmark__(ask|report_outcome|execute)/g, "$1");
+  out = out.replace(/mcp__bowmark__(get_library|run|report|register)/g, "$1");
   // 3) generalize Claude-Code browser-tool names used only as "raw browser code"
   //    examples — ChatGPT has no such tools, so a literal name would be a dead
   //    reference.
