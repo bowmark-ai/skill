@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.4.1 # x-release-please-version
+version: 5.5.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__register, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, WebFetch
 ---
 
 # bowmark
@@ -106,6 +106,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
+- **`cost`** — what the run was charged, in US dollars: `{ usd, lines: [{ sku, quantity, unit, usd }] }`, one line per resource used (proxy bandwidth in bytes, browser time in ms, captcha solves, paid API requests). Only calls that succeeded, or failed because of your script's arguments, are charged; a failure on Bowmark's side or the site's shows its resources at `usd: 0`. Every account gets $10 of usage free each month. When an account is out of free usage, at its spend cap, or its card was declined, `run` refuses with the reason and `https://bowmark.ai/dashboard/billing`. Relay that to your user rather than retrying.
 
 ## When a site needs the user signed in
 
@@ -124,7 +125,7 @@ What to do, in order:
 
 What never to do: ask the user for a password, offer to sign in on their behalf, or route around the login by scraping something else. The link opens a browser they drive themselves; Bowmark stores the resulting session, never their credentials.
 
-If the message says logged-in runs need an API key, that's the fix — tell the user to add a Bowmark API key to the MCP connection's `Authorization: Bearer` header (they mint one at bowmark.ai). Retrying won't help.
+If the message says Bowmark needs an account, that's the fix — show the user its steps (they create a key at bowmark.ai/dashboard/keys and add it as the `Authorization: Bearer` header). Retrying won't help.
 
 ## When a run fails
 
@@ -149,25 +150,15 @@ Fall back to browsing manually when: `get_library` shows no capability for the t
 - Don't retry a `needs_user` run before the user has actually signed in. It stops at the same place and costs another run.
 - Don't ask the user for site credentials, ever. The handoff link is how they sign in; you never see or handle a password.
 
-## Higher limits, and logged-in sites
+## Your API key
 
-Bowmark needs **no key** for public sites — the MCP works anonymously, capped per IP per day. A key swaps that cap for your account's monthly plan budget. It's purely additive: the same setup degrades to the anonymous tier when no key is present, so nothing breaks without one.
+**Bowmark requires an account.** Every call — `get_library` included — needs a Bowmark API key on the connection. A call without one comes back refused with numbered steps (sign up, create a key, add it), and nothing runs. **You cannot fix that yourself:** show your user the steps and wait. Don't retry until they've added a key.
 
-**A key IS required for any site that needs a login.** Bowmark won't hold a site session against an anonymous caller, because anonymous callers are identified only by IP and user-agent and several people can share those. Without a key, a script that needs a login comes back `needs_user` saying so.
-
-**`register({})` mints one, and you can call it yourself.** Every argument is optional, so a bare `register({})` is a complete call — there is nothing to ask the user for first, no sign-in, and no browser step. Reach for it when a run is refused for hitting the anonymous cap, when you expect more than a handful of calls, or when the user asks for an account. Where the connection allows it the new allowance applies immediately (`activeNow: true` in the response) and your next `run` is already on it.
-
-- `email` is OPTIONAL and is **not an API credential** — no key depends on it. But passing one **creates a Bowmark sign-in for that address**, so the user can sign in with an emailed code and manage the account. Pass it only if the user gave you one. **Never invent or placeholder one** — a made-up address is somebody else's mailbox.
-- **If you pass an email, say so to your user:** that address gets occasional Bowmark product and changelog email by default. `newsletter: false` declines, and every message carries a one-click unsubscribe. With no email there is nothing to subscribe and nothing to mention.
-- `promotions` is a separate consent and is off unless you set it. Set it **only** if the user said yes to promotional email. Don't infer consent.
-- **Afterwards, show the user `apiKey`.** It's returned once and can't be recovered — tell them to save it and add it to their client config so it works in future sessions. Don't write it to a file or a commit.
-- **Then tell them how to reach the account as a person.** If `signInUrl` came back, that's the way in: sign in there with that email, get a code, land in this account, nothing to save — and `claimUrl` is only a backup for a wrong address. If `signInUrl` is null, `claimUrl` is the **only** door; show it and say `claimExpiresAt` is the date it stops working.
-- Re-registering isn't how you get a second key: a used address is refused, and there's a per-network cap. If you already hold a key, present that instead.
-
-- **Or get one by hand:** sign in at bowmark.ai and mint one from the dashboard.
+- **Get one:** your user signs up at https://bowmark.ai/sign-up and creates a key at https://bowmark.ai/dashboard/keys.
 - **MCP:** add it to the server's `headers` in your client config — `"Authorization": "Bearer ${BOWMARK_API_KEY}"`. It rides every request; you never pass it per call.
+- **Signed-in sites** use the same key: the login handoff is issued against it.
 
-Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment, or mint one with `register`; otherwise proceed anonymously.
+Never hunt for, guess, or fabricate a key. Use one only if it's already in the environment; otherwise show your user the steps.
 
 ## Offer to remember it
 

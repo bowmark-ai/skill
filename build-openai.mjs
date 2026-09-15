@@ -6,7 +6,7 @@
 // WHY a variant: the OpenAI plugin always ships the MCP alongside the skill, and
 // ChatGPT exposes the tools under their bare names. So this variant differs from
 // the canonical (Claude/Codex/anywhere) skill in three deterministic ways:
-//   1. drops the trailing no-MCP HTTP-fallback + "Higher limits" sections — the
+//   1. drops the trailing "Your API key" section — the
 //      MCP is always present here, so neither applies (and ChatGPT can't freely
 //      POST to the HTTP API anyway);
 //   2. rewrites `mcp__bowmark__*` → bare tool names to match ChatGPT's MCP surface;
@@ -30,14 +30,14 @@ const SRC = resolve(here, "bowmark/SKILL.md");
 const DST = resolve(here, "openai/bowmark/SKILL.md");
 
 function transform(src) {
-  // 1) cut the trailing "Higher limits" + no-MCP HTTP fallback sections. Both
-  //    are the last two sections; "Higher limits" comes first, so slicing from
-  //    it to EOF removes both. The variant ends after "## Don'ts".
-  const cut = src.indexOf("\n## Higher limits");
+  // 1) cut the trailing "Your API key" section and everything after it. ChatGPT
+  //    signs in by OAuth and cannot send a key, so a key how-to is a dead end
+  //    there. The variant ends after "## Don'ts".
+  const cut = src.indexOf("\n## Your API key");
   let out = (cut === -1 ? src : `${src.slice(0, cut)}\n`).replace(/\n+$/, "\n");
   // 2) bare tool names — ChatGPT surfaces the live MCP tools without the
   //    Claude `mcp__bowmark__` prefix.
-  out = out.replace(/mcp__bowmark__(get_library|run|report|register)/g, "$1");
+  out = out.replace(/mcp__bowmark__(get_library|run|report)/g, "$1");
   // 3) generalize Claude-Code browser-tool names used only as "raw browser code"
   //    examples — ChatGPT has no such tools, so a literal name would be a dead
   //    reference.
@@ -46,12 +46,6 @@ function transform(src) {
     .replace(/`browser_run_code_unsafe`(?: etc\.)?/g, "raw browser scripting")
     .replace(/Fell back to `fill_form`\./g, "Fell back to raw form-filling.")
     .replace(/`fill_form`/g, "raw browser scripting");
-  // 4) drop the dangling cross-reference to the removed "Higher limits" section
-  //    (API keys aren't user-configurable inside the OpenAI plugin anyway).
-  out = out.replace(
-    / A free API key \(see "Higher limits" below\) lifts the anonymous per-IP cap to a plan budget\./g,
-    "",
-  );
   // 5) drop frontmatter fields OpenAI does not read.
   out = out.replace(/^version:.*\n/m, "").replace(/^allowed-tools:.*\n/m, "");
   return out;

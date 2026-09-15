@@ -44,7 +44,7 @@ codex plugin marketplace add bowmark-ai/plugin   # then `codex /plugins` to inst
 |---|---|
 | `get_library` | Read the typed function library for a task or a site. Read-only, touches no site, and an unrecognized query returns the index rather than an error. |
 | `run` | Execute a short async JavaScript script against the live sites and return `{ ok, result, logs, error, ms }`. |
-| `register` | Create a free Bowmark account and return an API key. Every argument is optional; `register({})` is a complete call. |
+| `report` | Tell Bowmark what it could not do, or which run came back wrong. Recorded as feedback; retries nothing. |
 
 ## OpenAI Apps (ChatGPT plugin) variant
 
