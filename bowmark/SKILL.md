@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.5.0 # x-release-please-version
+version: 5.6.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, WebFetch
 ---
 
 # bowmark
@@ -126,6 +126,49 @@ What to do, in order:
 What never to do: ask the user for a password, offer to sign in on their behalf, or route around the login by scraping something else. The link opens a browser they drive themselves; Bowmark stores the resulting session, never their credentials.
 
 If the message says Bowmark needs an account, that's the fix — show the user its steps (they create a key at bowmark.ai/dashboard/keys and add it as the `Authorization: Bearer` header). Retrying won't help.
+
+## Stored credentials — you handle NAMES, the user handles VALUES
+
+A run can sign in to a site with a credential the user stored once, instead of pausing for a
+login every time. You never see the value, and you must never ask for one.
+
+Four tools, and the order matters:
+
+- **`list_connections({})`** — which sites this account is already signed in to. A live one
+  means a script reaches that site's signed-in pages with no sign-in step. Check it before
+  telling the user anything about signing in.
+- **`list_secrets({})`** — which credentials are stored, by name, with their kind, the hosts
+  each may be used on, when it expires and when a run last used it. Never a value.
+- **`request_secret({ name, type, hosts? })`** — creates an empty, named slot and returns a
+  `url`. Give the user that link. They type the value on a Bowmark page, choose how long it
+  lives, and it is encrypted in their browser before it leaves.
+- **`get_secret_link({ name })`** — the dashboard link for a credential they already have, for
+  "where is my Acme password?". It returns a URL, never a value.
+
+Use a stored credential in a script by NAME:
+
+```js
+const orders = await bowmark.acme.listOrders({}, {
+  login: { username: bowmark.secret("acme_user"), password: bowmark.secret("acme_pw") },
+})
+```
+
+`bowmark.secret(name)` is an opaque handle. Printing it, returning it or putting it in a
+template string yields `‹secret:acme_pw›` — the value is substituted at the last moment,
+outside your script.
+
+Rules:
+
+- **Call `list_secrets` before `request_secret`.** A credential the user already set is ready
+  to use, and asking again sends them to a page for nothing.
+- **Never ask the user for a password, an API key or a one-time code in the conversation.**
+  Anything they type to you is in your context, the transcript and the logs. Hand them the
+  link instead.
+- **Never put a credential literally in a script.** Scripts are stored, and a run carrying one
+  is refused before it executes.
+- **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
+- Revoking a stored credential or a saved login is the user's, at
+  `bowmark.ai/dashboard/secrets` and `bowmark.ai/dashboard/connections`.
 
 ## When a run fails
 
