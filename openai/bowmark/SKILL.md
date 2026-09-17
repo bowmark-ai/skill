@@ -104,7 +104,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
-- **`cost`** — what the run was charged, in US dollars: `{ usd, lines: [{ sku, quantity, unit, usd }] }`, one line per resource used (proxy bandwidth in bytes, browser time in ms, captcha solves, paid API requests). Only calls that succeeded, or failed because of your script's arguments, are charged; a failure on Bowmark's side or the site's shows its resources at `usd: 0`. Every account gets $10 of usage free each month. When an account is out of free usage, at its spend cap, or its card was declined, `run` refuses with the reason and `https://bowmark.ai/dashboard/billing`. Relay that to your user rather than retrying.
+- **Billing**: a result does not carry its price. Usage and charges are on `https://bowmark.ai/dashboard/billing`, and every account gets $10 of usage free each month. When an account is out of free usage, at its spend cap, or its card was declined, `run` refuses with the reason and that link. Relay that to your user rather than retrying.
 
 ## When a site needs the user signed in
 
