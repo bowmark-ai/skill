@@ -164,6 +164,11 @@ Rules:
   link instead.
 - **Never put a credential literally in a script.** Scripts are stored, and a run carrying one
   is refused before it executes.
+- **A key Bowmark makes is saved for the user automatically.** When a keyed site has no key,
+  `get_library` names the function that makes one — ask the user first whether they already
+  have an account. The key it returns is stored as `<vendor>_api_key` and later runs use it
+  on their own. Whenever a run returns `savedSecrets`, tell the user what was saved and give
+  them each `viewUrl`, where they can view or manage it.
 - **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
 - Revoking a stored credential or a saved login is the user's, at
   `bowmark.ai/dashboard/secrets` and `bowmark.ai/dashboard/connections`.
