@@ -169,6 +169,10 @@ Rules:
   have an account. The key it returns is stored as `<vendor>_api_key` and later runs use it
   on their own. Whenever a run returns `savedSecrets`, tell the user what was saved and give
   them each `viewUrl`, where they can view or manage it.
+- **A file a run produces goes in `bowmark.files`, not in the result.** A CSV, an image, a
+  downloaded video: `bowmark.files.save({ name, text | base64 })` keeps it in the user's
+  account, private. Whenever a run returns `savedFiles`, give the user each file's `name` and
+  `url` (the link expires at `expiresAt`; `bowmark.files.url(id)` mints a fresh one).
 - **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
 - Revoking a stored credential or a saved login is the user's, at
   `bowmark.ai/dashboard/secrets` and `bowmark.ai/dashboard/connections`.
