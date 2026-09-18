@@ -173,6 +173,14 @@ Rules:
   downloaded video: `bowmark.files.save({ name, text | base64 })` keeps it in the user's
   account, private. Whenever a run returns `savedFiles`, give the user each file's `name` and
   `url` (the link expires at `expiresAt`; `bowmark.files.url(id)` mints a fresh one).
+- **A saved file is kept 30 DAYS unless you say otherwise, because the user pays for every
+  byte kept.** That default is right for working material — a scratch CSV, an intermediate
+  render, a screenshot backing one reply — so most saves need nothing. **For a file the user
+  actually asked to have, say so: `save({ name, text, keepFor: null })` keeps it for good**,
+  and tell the user which of the two you chose. A shorter life is `keepFor: "7d"`, and
+  `bowmark.files.setExpiry(id, { keepFor })` changes it afterwards. **`keepFor` is the FILE's
+  lifetime and `expiresIn` on `bowmark.files.url(id, { expiresIn })` is a LINK's** — they are
+  different clocks, and passing a link's seconds to a save destroys the file early.
 - **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
 - Revoking a stored credential or a saved login is the user's, at
   `bowmark.ai/dashboard/secrets` and `bowmark.ai/dashboard/connections`.
