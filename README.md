@@ -46,11 +46,13 @@ codex plugin marketplace add bowmark-ai/plugin   # then `codex /plugins` to inst
 | `run` | Execute a short async JavaScript script against the live sites and return `{ ok, result, logs, error, ms }`. |
 | `report` | Tell Bowmark what it could not do, or which run came back wrong. Recorded as feedback; retries nothing. |
 
+**No MCP client?** The same two calls are plain HTTP — `GET https://api.bowmark.ai/v1/library?query=…` and `POST https://api.bowmark.ai/v1/run`, both taking `Authorization: Bearer $BOWMARK_API_KEY`. The reference is [bowmark.ai/docs/api](https://bowmark.ai/docs/api); worked examples are at [bowmark.ai/docs/scripting#no-install-at-all](https://bowmark.ai/docs/scripting#no-install-at-all).
+
 ## OpenAI Apps (ChatGPT plugin) variant
 
 The [ChatGPT Apps](https://platform.openai.com/plugins) submission takes a skill as a **ZIP or folder**, and its needs differ slightly from the general skill: the plugin always ships the MCP alongside the skill, and ChatGPT exposes the tools under bare names. So there's a tailored variant, **generated from this same canonical skill** — never hand-maintained:
 
-- **Folder:** [`openai/bowmark/`](./openai/bowmark) — a content mirror of `bowmark/SKILL.md` with the no-MCP HTTP-fallback + "Higher limits" sections dropped (the MCP is always present here), tool names rewritten to bare `get_library` / `run`, and Claude-only frontmatter/tool-name references trimmed.
+- **Folder:** [`openai/bowmark/`](./openai/bowmark) — a content mirror of `bowmark/SKILL.md` with the trailing "Your API key" section and everything after it dropped (ChatGPT signs in by OAuth and cannot send a key), tool names rewritten to bare `get_library` / `run`, and Claude-only frontmatter/tool-name references trimmed. `build-openai.mjs` is the authority on what it cuts; this line described sections that have never existed in `bowmark/SKILL.md`, and a newcomer went looking for one.
 - **ZIP:** [`openai/bowmark-openai-skill.zip`](./openai/bowmark-openai-skill.zip) — the same folder zipped, ready to drop straight into the ChatGPT "Skills" uploader. A **committed artifact** (not built in CI: the release runner has no `zip` binary), so it rides the mirror to `bowmark-ai/skill` at a stable raw URL like any other file.
 
 Both are **generated** by [`build-openai.mjs`](./build-openai.mjs). Edit `bowmark/SKILL.md`, then regenerate and commit — never edit the `openai/` copies directly (CI's `check:openai` fails a PR whose text mirror is stale):

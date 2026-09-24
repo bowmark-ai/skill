@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.10.1 # x-release-please-version
+version: 5.11.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, WebFetch
 ---
 
 # bowmark
@@ -132,11 +132,19 @@ If the message says Bowmark needs an account, that's the fix — show the user i
 A run can sign in to a site with a credential the user stored once, instead of pausing for a
 login every time. You never see the value, and you must never ask for one.
 
-Four tools, and the order matters:
+Six tools, and the order matters:
 
-- **`list_connections({})`** — which sites this account is already signed in to. A live one
-  means a script reaches that site's signed-in pages with no sign-in step. Check it before
-  telling the user anything about signing in.
+- **`list_connections({})`** — which sites this account is already signed in to, with the
+  `id` to pass as `{ connection }` on a later signed-in call. A live one means a script
+  reaches that site's signed-in pages with no sign-in step. Check it before telling the
+  user anything about signing in.
+- **`logout_connection({ id })`** — signs a saved login out. Bowmark drops its cookies, and
+  where the site supports it the session is ended on the site too (`siteSignedOut: true` is
+  checked, not assumed). The entry is KEPT as `logged_out`, so the user can sign back in to
+  it. This is what "sign me out of X" means.
+- **`delete_connection({ id })`** — forgets a saved login by the `id` `list_connections`
+  returned. It does NOT sign the account out on the site and cannot be undone; only call it
+  when the user asked to remove a login, never to "fix" one that is merely `needs_reauth`.
 - **`list_secrets({})`** — which credentials are stored, by name, with their kind, the hosts
   each may be used on, when it expires and when a run last used it. Never a value.
 - **`request_secret({ name, type, hosts? })`** — creates an empty, named slot and returns a
@@ -184,8 +192,9 @@ Rules:
   lifetime and `expiresIn` on `bowmark.files.url(id, { expiresIn })` is a LINK's** — they are
   different clocks, and passing a link's seconds to a save destroys the file early.
 - **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
-- Revoking a stored credential or a saved login is the user's, at
-  `bowmark.ai/dashboard/secrets` and `bowmark.ai/dashboard/connections`.
+- Signing a saved login out is `logout_connection`; forgetting one is `delete_connection`; revoking a stored CREDENTIAL is still the
+  user's, at `bowmark.ai/dashboard/secrets`. Adding a new login is always the user's, at
+  `bowmark.ai/dashboard/connections`.
 
 ## When a run fails
 
