@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.12.2 # x-release-please-version
+version: 5.13.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -142,9 +142,11 @@ Six tools, and the order matters:
   where the site supports it the session is ended on the site too (`siteSignedOut: true` is
   checked, not assumed). The entry is KEPT as `logged_out`, so the user can sign back in to
   it. This is what "sign me out of X" means.
-- **`delete_connection({ id })`** — forgets a saved login by the `id` `list_connections`
-  returned. It does NOT sign the account out on the site and cannot be undone; only call it
-  when the user asked to remove a login, never to "fix" one that is merely `needs_reauth`.
+- **`delete_connection({ id })`** — asks the USER to delete a saved login. It deletes
+  nothing itself: it returns a `confirmUrl` on the dashboard, and the login is removed only
+  when the user clicks Delete there. Hand them the link. Only call it when the user asked to
+  remove a login. Never to "fix" one that is merely `needs_reauth` — signing in again
+  refreshes it in place and needs no confirmation.
 - **`list_secrets({})`** — which credentials are stored, by name, with their kind, the hosts
   each may be used on, when it expires and when a run last used it. Never a value.
 - **`request_secret({ name, type, hosts? })`** — creates an empty, named slot and returns a
@@ -192,7 +194,7 @@ Rules:
   lifetime and `expiresIn` on `bowmark.files.url(id, { expiresIn })` is a LINK's** — they are
   different clocks, and passing a link's seconds to a save destroys the file early.
 - **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
-- Signing a saved login out is `logout_connection`; forgetting one is `delete_connection`; revoking a stored CREDENTIAL is still the
+- Signing a saved login out is `logout_connection`; forgetting one is the user's, through the link `delete_connection` returns; revoking a stored CREDENTIAL is still the
   user's, at `bowmark.ai/dashboard/secrets`. Adding a new login is always the user's, at
   `bowmark.ai/dashboard/connections`.
 
