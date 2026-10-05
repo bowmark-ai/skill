@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.13.0 # x-release-please-version
+version: 5.13.1 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -137,7 +137,9 @@ Six tools, and the order matters:
 - **`list_connections({})`** — which sites this account is already signed in to, with the
   `id` to pass as `{ connection }` on a later signed-in call. A live one means a script
   reaches that site's signed-in pages with no sign-in step. Check it before telling the
-  user anything about signing in.
+  user anything about signing in, and reuse the login you used last time. One marked
+  `needs_reauth`, `expired` or `logged_out` is not lost: a run that needs it pauses with a
+  link that signs back in to that SAME `id`.
 - **`logout_connection({ id })`** — signs a saved login out. Bowmark drops its cookies, and
   where the site supports it the session is ended on the site too (`siteSignedOut: true` is
   checked, not assumed). The entry is KEPT as `logged_out`, so the user can sign back in to
