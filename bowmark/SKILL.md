@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.13.1 # x-release-please-version
+version: 5.14.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -25,7 +25,7 @@ The web as callable functions. Read the library, write a script, get the result.
 
 ## The loop
 
-1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
+1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **A task with several parts (a shop and a video site, a flight and a hotel) is one lookup per part, sent together in ONE call**: `get_library({ queries: ["amazon", "youtube"] })`. Each part is answered in its own section, exactly as it would be alone. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
 3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
 
