@@ -200,10 +200,11 @@ Rules:
 
 ## When a run fails
 
-Read the error before retrying. The three classes need different responses:
+Read the error before retrying. The classes need different responses:
 
 - **A script error** (a `TypeError`, a bad argument shape) — your script is wrong. Re-read the types in the library and fix it. Re-running unchanged will fail identically.
-- **A timeout** — the script was too big for one run. Split it: fewer parallel calls, or a narrower query.
+- **A timeout** — the script was too big for one run. Split it: fewer parallel calls, or a narrower query. If the result carries a large `queuedMs`, most of the 90 seconds went to waiting for a free slot, so the script was not the problem: send fewer runs at the same time.
+- **The run never started** — an error beginning `Too many runs at once` (HTTP 429, with `meta.concurrency.retryAfterSeconds`) or `no executor picked up this run` means nothing ran and nothing was charged. Wait the stated time and send the same script again, with fewer runs in flight. If it says the executor service is down, that is an outage and only time helps.
 - **A site failure inside a capability** — the capability already routed around it where it could. If the whole call failed, the result genuinely isn't available right now; say so rather than inventing one.
 
 If you pinned a **provider** and it failed, retry through the **capability** instead — it covers the same ground across other sites. That's the tradeoff you took when you pinned.
