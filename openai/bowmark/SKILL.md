@@ -101,6 +101,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "partial"`** — the script RAN and `result` is real, but some of what it called never answered, so the answer is narrower than you asked for. `ok` is still `true`. `incomplete.summary` says what happened; `incomplete.failures` names each call that threw and what the site said; `incomplete.degraded` names each call that answered while reporting its own results thin. **Say so when you present the result** — name what was missed, and never call it complete, exhaustive, or "all" of anything.
   - **Check `incomplete.failures[].fixable` before you conclude anything.** `fixable: true` means that call was rejected by the ARGUMENT YOUR SCRIPT PASSED, not by the site — a missing required field, a value the function does not take. The error text names what the function actually wants. Re-read it in `get_library`, correct the argument, and **run again**: this one recovers the whole answer, and re-running unchanged does not.
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
+- **`notes`** — what a call told you about an answer that is WHOLE: how it was reached (a standby search engine, a retry from a second exit), an argument Bowmark adjusted (a clamped `timeoutMs`), or a caveat for one use of the content (a price in markdown that may not be bound to its own item). Each entry is `{ path, notes }`. A note never makes a run `partial` and is never a failure, so do not report the answer as incomplete because of one. Read it before you present the result, and pass on any note that bears on what your user asked.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
@@ -130,7 +131,7 @@ If the message says Bowmark needs an account, that's the fix — show the user i
 A run can sign in to a site with a credential the user stored once, instead of pausing for a
 login every time. You never see the value, and you must never ask for one.
 
-Six tools, and the order matters:
+Three tools, and the order matters:
 
 - **`list_connections({})`** — which sites this account is already signed in to, with the
   `id` to pass as `{ connection }` on a later signed-in call. A live one means a script
@@ -147,13 +148,8 @@ Six tools, and the order matters:
   when the user clicks Delete there. Hand them the link. Only call it when the user asked to
   remove a login. Never to "fix" one that is merely `needs_reauth` — signing in again
   refreshes it in place and needs no confirmation.
-- **`list_secrets({})`** — which credentials are stored, by name, with their kind, the hosts
-  each may be used on, when it expires and when a run last used it. Never a value.
-- **`request_secret({ name, type, hosts? })`** — creates an empty, named slot and returns a
-  `url`. Give the user that link. They type the value on a Bowmark page, choose how long it
-  lives, and it is encrypted in their browser before it leaves.
-- **`get_secret_link({ name })`** — the dashboard link for a credential they already have, for
-  "where is my Acme password?". It returns a URL, never a value.
+- **Stored credentials are the user's, at https://bowmark.ai/dashboard/secrets.** They add
+  one there under the name your script will use, and see which ones they already hold.
 
 Use a stored credential in a script by NAME:
 
@@ -169,11 +165,11 @@ outside your script.
 
 Rules:
 
-- **Call `list_secrets` before `request_secret`.** A credential the user already set is ready
-  to use, and asking again sends them to a page for nothing.
+- **Ask before sending the user to set a credential.** One they already stored is ready to
+  use by name, and setting it again is a trip for nothing.
 - **Never ask the user for a password, an API key or a one-time code in the conversation.**
-  Anything they type to you is in your context, the transcript and the logs. Hand them the
-  link instead.
+  Anything they type to you is in your context, the transcript and the logs. Send them to
+  https://bowmark.ai/dashboard/secrets instead.
 - **Never put a credential literally in a script.** Scripts are stored, and a run carrying one
   is refused before it executes.
 - **A key Bowmark makes is saved for the user automatically.** When a keyed site has no key,
@@ -193,7 +189,7 @@ Rules:
   `bowmark.files.setExpiry(id, { keepFor })` changes it afterwards. **`keepFor` is the FILE's
   lifetime and `expiresIn` on `bowmark.files.url(id, { expiresIn })` is a LINK's** — they are
   different clocks, and passing a link's seconds to a save destroys the file early.
-- **`list_connections` and `get_secret_link` are read-only** — neither changes anything, so reach for them freely rather than guessing at what the account holds.
+- **`list_connections` is read-only** — it changes nothing, so reach for it freely rather than guessing at what the account holds.
 - Signing a saved login out is `logout_connection`; forgetting one is the user's, through the link `delete_connection` returns; revoking a stored CREDENTIAL is still the
   user's, at `bowmark.ai/dashboard/secrets`. Adding a new login is always the user's, at
   `bowmark.ai/dashboard/connections`.

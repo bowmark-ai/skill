@@ -5,13 +5,15 @@
 //
 // WHY a variant: the OpenAI plugin always ships the MCP alongside the skill, and
 // ChatGPT exposes the tools under their bare names. So this variant differs from
-// the canonical (Claude/Codex/anywhere) skill in three deterministic ways:
+// the canonical (Claude/Codex/anywhere) skill in four deterministic ways:
 //   1. drops the trailing "Your API key" section — the
 //      MCP is always present here, so neither applies (and ChatGPT can't freely
 //      POST to the HTTP API anyway);
 //   2. rewrites `mcp__bowmark__*` → bare tool names to match ChatGPT's MCP surface;
 //   3. trims frontmatter fields OpenAI doesn't read (version, allowed-tools),
-//      and generalizes Claude-Code-only browser tool names used as examples.
+//      and generalizes Claude-Code-only browser tool names used as examples;
+//   4. drops the three secret tools, which the ChatGPT directory connector
+//      does not offer, and points at the dashboard instead.
 //
 // Canonical SKILL.md stays the SINGLE source of truth — never edit the generated
 // copy. Same discipline as packages/plugin/sync-skill.sh: edit canonical, then
@@ -48,6 +50,61 @@ function transform(src) {
     .replace(/`fill_form`/g, "raw browser scripting");
   // 5) drop frontmatter fields OpenAI does not read.
   out = out.replace(/^version:.*\n/m, "").replace(/^allowed-tools:.*\n/m, "");
+  // 4) (after 5, so allowed-tools is already gone) drop the secret tools. The OpenAI plugin's MCP is the ChatGPT directory
+  //    connector (/mcp/chatgpt-app), which does not offer list_secrets,
+  //    request_secret or get_secret_link — OpenAI's plugin guidelines bar a listed
+  //    plugin from soliciting credentials. apps/api `mcp-destinations.ts` holds the
+  //    same three names as SECRET_TOOL_NAMES. Each edit must match, so a canonical
+  //    reword fails the build here instead of shipping a bullet for a tool ChatGPT
+  //    was never given; the final check asserts none of the names survived.
+  out = withoutSecretTools(out);
+  return out;
+}
+
+const SECRET_TOOL_NAMES = ["list_secrets", "request_secret", "get_secret_link"];
+
+function replaceOnce(text, pattern, replacement) {
+  if (!pattern.test(text)) {
+    throw new Error(
+      `build-openai: canonical SKILL.md no longer matches ${pattern} — update withoutSecretTools`,
+    );
+  }
+  return text.replace(pattern, replacement);
+}
+
+function withoutSecretTools(src) {
+  let out = src;
+  out = replaceOnce(
+    out,
+    /\nSix tools, and the order matters:\n/,
+    "\nThree tools, and the order matters:\n",
+  );
+  out = replaceOnce(
+    out,
+    /- \*\*`list_secrets\(\{\}\)`\*\*[\s\S]*?(?=\nUse a stored credential)/,
+    "- **Stored credentials are the user's, at https://bowmark.ai/dashboard/secrets.** They add\n" +
+      "  one there under the name your script will use, and see which ones they already hold.\n",
+  );
+  out = replaceOnce(
+    out,
+    /- \*\*Call `list_secrets` before `request_secret`\.\*\*[\s\S]*?for nothing\.\n/,
+    "- **Ask before sending the user to set a credential.** One they already stored is ready to\n" +
+      "  use by name, and setting it again is a trip for nothing.\n",
+  );
+  out = replaceOnce(
+    out,
+    /Hand them the\n {2}link instead\./,
+    "Send them to\n  https://bowmark.ai/dashboard/secrets instead.",
+  );
+  out = replaceOnce(
+    out,
+    /- \*\*`list_connections` and `get_secret_link` are read-only\*\* — neither changes anything, so reach for them freely/,
+    "- **`list_connections` is read-only** — it changes nothing, so reach for it freely",
+  );
+  const left = SECRET_TOOL_NAMES.filter((name) => out.includes(name));
+  if (left.length) {
+    throw new Error(`build-openai: the OpenAI variant still names ${left.join(", ")}`);
+  }
   return out;
 }
 

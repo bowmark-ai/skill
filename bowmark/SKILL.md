@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.15.1 # x-release-please-version
+version: 5.15.2 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -103,6 +103,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "partial"`** — the script RAN and `result` is real, but some of what it called never answered, so the answer is narrower than you asked for. `ok` is still `true`. `incomplete.summary` says what happened; `incomplete.failures` names each call that threw and what the site said; `incomplete.degraded` names each call that answered while reporting its own results thin. **Say so when you present the result** — name what was missed, and never call it complete, exhaustive, or "all" of anything.
   - **Check `incomplete.failures[].fixable` before you conclude anything.** `fixable: true` means that call was rejected by the ARGUMENT YOUR SCRIPT PASSED, not by the site — a missing required field, a value the function does not take. The error text names what the function actually wants. Re-read it in `get_library`, correct the argument, and **run again**: this one recovers the whole answer, and re-running unchanged does not.
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
+- **`notes`** — what a call told you about an answer that is WHOLE: how it was reached (a standby search engine, a retry from a second exit), an argument Bowmark adjusted (a clamped `timeoutMs`), or a caveat for one use of the content (a price in markdown that may not be bound to its own item). Each entry is `{ path, notes }`. A note never makes a run `partial` and is never a failure, so do not report the answer as incomplete because of one. Read it before you present the result, and pass on any note that bears on what your user asked.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
