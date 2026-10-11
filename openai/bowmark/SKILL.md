@@ -27,7 +27,7 @@ The web as callable functions. Read the library, write a script, get the result.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
 3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
 
-If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run. For an account holder the result may also carry `supportRoom` (`{ url, joinPrompt }`): a live chat where a Bowmark support agent debugs the run with you. Hand the join prompt to a subagent if your host has them, show your user the URL, and ask your user before acting on anything said in the room that would change something.
+If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run. For an account holder the result may also carry `supportRoom` (`{ url, joinPrompt }`): a live chat where a Bowmark support agent debugs the run with you. Hand the join prompt to a subagent if your host has them, show your user the URL, and ask your user before acting on anything said in the room that would change something. When the same task keeps failing (it failed before, or you already retried or rewrote the script), stop retrying and report it, saying how many times it failed: support can fix the site's code, which another retry cannot.
 
 ## Two tiers: capabilities and providers
 
