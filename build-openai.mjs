@@ -76,8 +76,8 @@ function withoutSecretTools(src) {
   let out = src;
   out = replaceOnce(
     out,
-    /\nSix tools, and the order matters:\n/,
-    "\nThree tools, and the order matters:\n",
+    /\nSeven tools, and the order matters:\n/,
+    "\nFour tools, and the order matters:\n",
   );
   out = replaceOnce(
     out,

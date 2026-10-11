@@ -101,6 +101,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "partial"`** — the script RAN and `result` is real, but some of what it called never answered, so the answer is narrower than you asked for. `ok` is still `true`. `incomplete.summary` says what happened; `incomplete.failures` names each call that threw and what the site said; `incomplete.degraded` names each call that answered while reporting its own results thin. **Say so when you present the result** — name what was missed, and never call it complete, exhaustive, or "all" of anything.
   - **Check `incomplete.failures[].fixable` before you conclude anything.** `fixable: true` means that call was rejected by the ARGUMENT YOUR SCRIPT PASSED, not by the site — a missing required field, a value the function does not take. The error text names what the function actually wants. Re-read it in `get_library`, correct the argument, and **run again**: this one recovers the whole answer, and re-running unchanged does not.
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
+  - **`incomplete.allFailed: true`** means every call the script made failed — not "most of them". `result` carries no real data even though the script returned something, because it likely caught the failures and built a value out of error text. Tell your user plainly that nothing was found; do not report it as a thin-but-usable answer.
 - **`notes`** — what a call told you about an answer that is WHOLE: how it was reached (a standby search engine, a retry from a second exit), an argument Bowmark adjusted (a clamped `timeoutMs`), or a caveat for one use of the content (a price in markdown that may not be bound to its own item). Each entry is `{ path, notes }`. A note never makes a run `partial` and is never a failure, so do not report the answer as incomplete because of one. Read it before you present the result, and pass on any note that bears on what your user asked.
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
@@ -131,7 +132,7 @@ If the message says Bowmark needs an account, that's the fix — show the user i
 A run can sign in to a site with a credential the user stored once, instead of pausing for a
 login every time. You never see the value, and you must never ask for one.
 
-Three tools, and the order matters:
+Four tools, and the order matters:
 
 - **`list_connections({})`** — which sites this account is already signed in to, with the
   `id` to pass as `{ connection }` on a later signed-in call. A live one means a script
@@ -139,6 +140,13 @@ Three tools, and the order matters:
   user anything about signing in, and reuse the login you used last time. One marked
   `needs_reauth`, `expired` or `logged_out` is not lost: a run that needs it pauses with a
   link that signs back in to that SAME `id`.
+- **`add_connection({ site, connection? })`** — a sign-in link for one site, right now,
+  before any run needs it. `site` is a domain, a URL or a name (`youtube.com`). Give the user
+  the `url`; on that page they sign in, or press "Use Chrome extension" to send the login
+  their desktop Chrome already holds. Call it whenever the user asks to log in, connect or
+  link an account, rather than sending them to the extension or the dashboard. When Bowmark
+  cannot sign in to that site it says so and lists the sites it can; tell the user plainly.
+  Pass a saved login's `id` as `connection` to sign back in to it.
 - **`logout_connection({ id })`** — signs a saved login out. Bowmark drops its cookies, and
   where the site supports it the session is ended on the site too (`siteSignedOut: true` is
   checked, not assumed). The entry is KEPT as `logged_out`, so the user can sign back in to
@@ -190,7 +198,7 @@ Rules:
   lifetime and `expiresIn` on `bowmark.files.url(id, { expiresIn })` is a LINK's** — they are
   different clocks, and passing a link's seconds to a save destroys the file early.
 - **`list_connections` is read-only** — it changes nothing, so reach for it freely rather than guessing at what the account holds.
-- Signing a saved login out is `logout_connection`; forgetting one is the user's, through the link `delete_connection` returns; revoking a stored CREDENTIAL is still the
+- Adding a login is `add_connection`, which hands you the link for the user; signing a saved login out is `logout_connection`; forgetting one is the user's, through the link `delete_connection` returns; revoking a stored CREDENTIAL is still the
   user's, at `bowmark.ai/dashboard/secrets`. Adding a new login is always the user's, at
   `bowmark.ai/dashboard/connections`.
 
