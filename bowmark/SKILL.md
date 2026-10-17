@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.19.0 # x-release-please-version
+version: 5.20.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, WebFetch
 ---
 
 # bowmark
@@ -123,8 +123,8 @@ What comes back:
 What to do, in order:
 
 1. Give the user the `url` and name the sites it covers. One link covers every site the script needs.
-2. **Wait.** Don't poll, don't retry, don't try a different site instead.
-3. When they say they're done, send **the same script again, unchanged**.
+2. **Wait for it, in the same turn.** Call `wait_for_sign_in` with `meta.handoff.ref` (over plain HTTP, `GET /v1/sign-ins/<ref>?waitMs=45000` with the same API key). It answers the moment they finish, so you never have to ask whether they're done. `pending` means call it again; `cancelled` means they pressed Cancel, so tell them; `expired` means the link ran out, so re-send the script for a fresh one. Don't retry the script and don't try a different site while it is `pending`.
+3. When it says `done` (or they tell you they're done), send **the same script again, unchanged**.
 
 What never to do: ask the user for a password, offer to sign in on their behalf, or route around the login by scraping something else. The link opens a browser they drive themselves; Bowmark stores the resulting session, never their credentials.
 
@@ -156,6 +156,12 @@ Seven tools, and the order matters:
   link an account, rather than sending them to the extension or the dashboard. When Bowmark
   cannot sign in to that site it says so and lists the sites it can; tell the user plainly.
   Pass a saved login's `id` as `connection` to sign back in to it.
+- **`wait_for_sign_in({ ref, waitMs? })`** — holds until the user finishes a sign-in link,
+  so you hear it the moment they are done instead of asking. `ref` is `meta.handoff.ref` from
+  a paused run, or `ref` from `add_connection`. Write the link in your reply first, then call
+  it in the same turn. It answers `state`: `done` (send the same script again), `pending`
+  (call it again), `cancelled` (tell the user), `expired` (re-send the script for a fresh
+  link), or `unknown`. One call waits up to 45 seconds by default, 50 at most.
 - **`logout_connection({ id })`** — signs a saved login out. Bowmark drops its cookies, and
   where the site supports it the session is ended on the site too (`siteSignedOut: true` is
   checked, not assumed). The entry is KEPT as `logged_out`, so the user can sign back in to
