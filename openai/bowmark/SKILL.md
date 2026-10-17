@@ -141,6 +141,12 @@ Four tools, and the order matters:
   user anything about signing in, and reuse the login you used last time. One marked
   `needs_reauth`, `expired` or `logged_out` is not lost: a run that needs it pauses with a
   link that signs back in to that SAME `id`.
+- **`lease_ip({ country?, termDays?, confirmPriceCents?, another? })`** — a dedicated IP for a
+  site whose login works only from the address it signed in from (📍 in `get_library`;
+  LinkedIn). Called with no arguments, `lease_ip` says whether the account already holds one (then
+  every sign-in already uses it), or quotes the price and names anything the user must do
+  first (add a card, pass the one-time identity check) with its link. Buy only after the user
+  agrees, by calling again with `confirmPriceCents` set to that price.
 - **`add_connection({ site, connection? })`** — a sign-in link for one site, right now,
   before any run needs it. `site` is a domain, a URL or a name (`youtube.com`). Give the user
   the `url`; on that page they sign in, or press "Use Chrome extension" to send the login
