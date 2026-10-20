@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.21.0 # x-release-please-version
+version: 5.22.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, WebFetch
 ---
 
 # bowmark
@@ -129,6 +129,21 @@ What to do, in order:
 What never to do: ask the user for a password, offer to sign in on their behalf, or route around the login by scraping something else. The link opens a browser they drive themselves; Bowmark stores the resulting session, never their credentials.
 
 If the message says Bowmark needs an account, that's the fix — show the user its steps (they create a key at bowmark.ai/dashboard/keys and add it as the `Authorization: Bearer` header). Retrying won't help.
+
+## A flow that waits on the user mid-way — `session_call`
+
+Every `run` starts a fresh browser, so a flow that has to stop and wait for the user
+between two steps cannot finish in `run`: an OpenTable booking that texts the user a code,
+a cart filled over several steps. Use `session_call` for those.
+
+- **`session_call({ path, args?, sessionId? })`** runs ONE library function in a session
+  that keeps its browser. `path` is the function as a script writes it after `bowmark.`,
+  split on the dots: `["providers","opentable","startBooking"]`. Omit `sessionId` on the
+  first call; the answer carries the `sessionId` to pass on every later call. The answer is
+  `{ sessionId, ok, status, result, logs, error?, code? }`.
+- A session closes itself after a few idle minutes, so ask the user for the code (or the
+  answer) right away and make the next call as soon as they reply.
+- Call `session_close` with the `sessionId` when the task is done.
 
 ## Stored credentials — you handle NAMES, the user handles VALUES
 

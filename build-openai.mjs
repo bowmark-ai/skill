@@ -58,6 +58,14 @@ function transform(src) {
   //    reword fails the build here instead of shipping a bullet for a tool ChatGPT
   //    was never given; the final check asserts none of the names survived.
   out = withoutSecretTools(out);
+  // 6) drop the session section. The ChatGPT directory connector does not offer
+  //    `session_call` / `session_close` (`withheldToolResponse` in apps/api
+  //    `routes/mcp.ts`), so a section teaching them names tools ChatGPT never sees.
+  out = replaceOnce(
+    out,
+    /## A flow that waits on the user mid-way — `session_call`\n[\s\S]*?(?=## Stored credentials)/,
+    "",
+  );
   return out;
 }
 
