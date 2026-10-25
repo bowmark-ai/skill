@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.24.0 # x-release-please-version
+version: 5.25.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -100,6 +100,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 
 - **`status: "ok"`** — `result` is whatever you returned. Use it.
 - **`status: "error"`** — `error` is the message; `result` is null. The script threw, or ran out of time before any call it made had answered. Read `error` and `logs` together: the last `log()` line tells you how far it got.
+  - An `error` beginning `Refused before running:` means Bowmark checked the script against the library first and found names it does not have. Nothing ran and nothing was charged. Every such name is listed with its line: fix them all (the real names are in `get_library`) and run again. If you are sure a listed name exists, make the script's first line `// bowmark-check: off` and it runs unchecked.
 - **`status: "partial"`** — the script RAN and `result` is real, but some of what it called never answered, so the answer is narrower than you asked for. `ok` is still `true`. `incomplete.summary` says what happened; `incomplete.failures` names each call that threw and what the site said; `incomplete.degraded` names each call that answered while reporting its own results thin. **Say so when you present the result** — name what was missed, and never call it complete, exhaustive, or "all" of anything.
   - **Check `incomplete.failures[].fixable` before you conclude anything.** `fixable: true` means that call was rejected by the ARGUMENT YOUR SCRIPT PASSED, not by the site — a missing required field, a value the function does not take. The error text names what the function actually wants. Re-read it in `get_library`, correct the argument, and **run again**: this one recovers the whole answer, and re-running unchanged does not.
   - For every other failure, re-running rarely helps; a site refusing us refuses us again.
