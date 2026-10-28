@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.26.0 # x-release-please-version
+version: 5.27.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, mcp__bowmark__jig_look, WebFetch
 ---
 
 # bowmark
@@ -110,7 +110,7 @@ Each result carries the query it came from (a flight result carries its `date`),
 - **`status: "needs_user"`** — a site needs the USER signed in. See below. Not something you can fix by editing the script.
 - **`logs`** — your `log()` lines in order. Read them alongside `result`: `logs` is the only channel a script has for anything that is not its return value, so on a partial or surprising answer they are what tells you how far it got.
 - **`runId`** — the stable reference for `report` when the answer was missing, wrong, or incomplete. It is not an instruction to retry.
-- **Billing**: a result does not carry its price. Usage and charges are on `https://bowmark.ai/dashboard/billing`, and every account gets $10 of usage free each month. When an account is out of free usage, at its spend cap, or its card was declined, `run` refuses with the reason and that link. Relay that to your user rather than retrying.
+- **Billing**: a result does not carry its price. Usage and charges are on `https://bowmark.ai/dashboard/billing`, and every account gets its first $10 of usage free, once (it does not reset monthly). When an account is out of free usage, at its spend cap, or its card was declined, `run` refuses with the reason and that link. Relay that to your user rather than retrying.
 
 ## When a site needs the user signed in
 
@@ -161,6 +161,10 @@ that calls the library itself.
 - **`jig_update({ jigId, state?, html?, title? })`** steers the open page — merge rules
   into its state (`null` deletes a key), or replace the page. It updates itself within
   seconds; never open a second one for the same thing — call `jig_update` again.
+- **`jig_look({ jigId })`** shows you what the page is showing the user right now and what
+  they just did on it. Call `jig_look` before you curate ("clear the slop", "why is this here").
+- **`/jig <site>`** is the same thing as a slash command: a jig of any site, made to look
+  like it, with the Bowmark logo where the site's logo goes and your curation in its state.
 - **`jig_list({})`** lists the jigs this user has made. When they mention one ("my YouTube
   feed"), reopen it with `jig_open({ jigId })` — page and state as they left them — rather
   than building a new one — so call `jig_list` first.
