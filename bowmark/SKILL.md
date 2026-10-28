@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.25.0 # x-release-please-version
+version: 5.26.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, WebFetch
 ---
 
 # bowmark
@@ -145,6 +145,25 @@ a cart filled over several steps. Use `session_call` for those.
 - A session closes itself after a few idle minutes, so ask the user for the code (or the
   answer) right away and make the next call as soon as they reply.
 - Call `session_close` with the `sessionId` when the task is done.
+
+## A page the user can use — `jig_open`
+
+When the answer is better USED than read — a feed to scroll, a list to click through, a
+dashboard — open a jig (a just-in-time GUI): a page you write, drawn in the chat's panel,
+that calls the library itself.
+
+- **`jig_open({ title?, template?, html?, state? })`** opens it. Start from a built-in
+  (`template: "youtube-feed"`, the user's own YouTube re-ranked by your rules) or write the
+  whole page as `html`. Inside it, `window.bowmark.call("providers.youtube.search", { query })`
+  is a real run for this user, `bowmark.state` is the state you set, and `bowmark.say(text)`
+  posts into the chat as the user. The tool description has the full page contract. A host
+  that cannot draw it gets a plain link to give the user.
+- **`jig_update({ jigId, state?, html?, title? })`** steers the open page — merge rules
+  into its state (`null` deletes a key), or replace the page. It updates itself within
+  seconds; never open a second one for the same thing — call `jig_update` again.
+- **`jig_list({})`** lists the jigs this user has made. When they mention one ("my YouTube
+  feed"), reopen it with `jig_open({ jigId })` — page and state as they left them — rather
+  than building a new one — so call `jig_list` first.
 
 ## Stored credentials — you handle NAMES, the user handles VALUES
 
