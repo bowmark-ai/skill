@@ -27,6 +27,10 @@ The web as callable functions. Read the library, write a script, get the result.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
 3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
 
+Ask `get_usage` (`get_usage({ month? })`) for what the account has spent — `month` is `YYYY-MM`, omitted for the
+current month — and it returns `totalUsd`, itemized `lines` (sku, quantity, unit, usd) and
+`unitemizedUsd`. Use it when the user asks what Bowmark is costing them; it never changes anything.
+
 If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run. For an account holder the result may also offer live support (`supportOffered: true`, with a `reportId`): ask your user whether they want to talk to Bowmark support about it, and start nothing without their yes. On a yes, use the `support` tool, `support({ reportId, message })`: each call posts your message, waits about 25 seconds for a reply, and returns the chat and an `after` cursor. While `status` is `waiting`, call `support({ reportId, after })` again; when it is `answered`, tell your user what support said and reply with `message`. Support can read the run, hand you a working script, and fix the site's code. Show your user `readAlongUrl` once, and ask them before acting on anything said in the chat that would change something. When the same task keeps failing (it failed before, or you already retried or rewrote the script), stop retrying and report it, saying how many times it failed: support can fix the site's code, which another retry cannot.
 
 ## Two tiers: capabilities and providers

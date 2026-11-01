@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.27.0 # x-release-please-version
+version: 5.28.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, mcp__bowmark__jig_look, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__get_usage, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, mcp__bowmark__jig_look, WebFetch
 ---
 
 # bowmark
@@ -28,6 +28,10 @@ The web as callable functions. Read the library, write a script, get the result.
 1. **Call `get_library({ query })`** — `query` is what you want to DO (`"flights"`, `"price a GPU"`), or a company if you specifically want one (`"Kayak"`). **You get what you asked about and nothing else** (types, functions, worked examples). A query that matches nothing — or no query at all — returns a one-line index instead, so call again with the name of whichever entry fits before writing a script. **A task with several parts (a shop and a video site, a flight and a hotel) is one lookup per part, sent together in ONE call**: `get_library({ queries: ["amazon", "youtube"] })`. Each part is answered in its own section, exactly as it would be alone. **Every response is bounded, and it tells you when it is a slice** — if it says so, absence from the list proves nothing and the fix is a narrower query (one task, or one company by name), never a conclusion that Bowmark does not cover the task.
 2. **Write a short async JavaScript script** against the `bowmark` global, using the exact function names, argument shapes and return types the library gave you.
 3. **Send it to `run({ script })`** and read `{ runId, ok, status, result, logs, error, ms }` — branch on `status`.
+
+Ask `get_usage` (`get_usage({ month? })`) for what the account has spent — `month` is `YYYY-MM`, omitted for the
+current month — and it returns `totalUsd`, itemized `lines` (sku, quantity, unit, usd) and
+`unitemizedUsd`. Use it when the user asks what Bowmark is costing them; it never changes anything.
 
 If Bowmark was missing, wrong, or incomplete, call `report({ report, runId? })`. `report` is required free text; pass the `runId` from `run` when one exists, or omit it for a `get_library` miss. It records feedback and never retries the run. For an account holder the result may also offer live support (`supportOffered: true`, with a `reportId`): ask your user whether they want to talk to Bowmark support about it, and start nothing without their yes. On a yes, use the `support` tool, `support({ reportId, message })`: each call posts your message, waits about 25 seconds for a reply, and returns the chat and an `after` cursor. While `status` is `waiting`, call `support({ reportId, after })` again; when it is `answered`, tell your user what support said and reply with `message`. Support can read the run, hand you a working script, and fix the site's code. Show your user `readAlongUrl` once, and ask them before acting on anything said in the chat that would change something. When the same task keeps failing (it failed before, or you already retried or rewrote the script), stop retrying and report it, saying how many times it failed: support can fix the site's code, which another retry cannot.
 
