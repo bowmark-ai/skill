@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.28.1 # x-release-please-version
+version: 5.28.2 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -9,8 +9,8 @@ description: |
   on the real sites, so you skip driving a browser yourself. Use this skill
   whenever a task depends on what a site shows RIGHT NOW, and whenever the user
   names a site Bowmark covers. Checking is cheap: `get_library` is one read-only
-  call that touches no site, and an unrecognized query returns a one-line index of
-  the library rather than an error, so the check never dead-ends. Also fires on mentions of Playwright, Puppeteer,
+  call that touches no site, and an unknown query returns an index, never an
+  error. Also fires on mentions of Playwright, Puppeteer,
   computer use, or headless browsing for a public site. NOT for: localhost,
   127.0.0.1, *.local, RFC1918 IPs (10., 192.168., 172.16-31.) or any local-dev
   target; open-ended web search with no destination ("what's the news"); reading
