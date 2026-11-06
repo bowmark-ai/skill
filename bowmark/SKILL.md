@@ -1,6 +1,6 @@
 ---
 name: bowmark
-version: 5.29.0 # x-release-please-version
+version: 5.30.0 # x-release-please-version
 description: |
   Do things on live websites: look up current prices, check real availability or
   stock, search a site, get a quote or a fare, drive a configurator, start a
@@ -16,7 +16,7 @@ description: |
   target; open-ended web search with no destination ("what's the news"); reading
   local files; plain JSON APIs you can already call; or facts already in training
   data.
-allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__get_usage, mcp__bowmark__llm_poll, mcp__bowmark__llm_answer, mcp__bowmark__llm_detach, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, mcp__bowmark__jig_look, mcp__bowmark__jig_search, mcp__bowmark__jig_get, mcp__bowmark__jig_publish, mcp__bowmark__jig_pull_update, WebFetch
+allowed-tools: mcp__bowmark__get_library, mcp__bowmark__run, mcp__bowmark__report, mcp__bowmark__support, mcp__bowmark__get_usage, mcp__bowmark__llm_poll, mcp__bowmark__llm_answer, mcp__bowmark__llm_detach, mcp__bowmark__list_secrets, mcp__bowmark__request_secret, mcp__bowmark__get_secret_link, mcp__bowmark__list_connections, mcp__bowmark__add_connection, mcp__bowmark__delete_connection, mcp__bowmark__logout_connection, mcp__bowmark__lease_ip, mcp__bowmark__wait_for_sign_in, mcp__bowmark__session_call, mcp__bowmark__session_close, mcp__bowmark__jig_open, mcp__bowmark__jig_list, mcp__bowmark__jig_update, mcp__bowmark__jig_look, mcp__bowmark__jig_search, mcp__bowmark__jig_get, mcp__bowmark__jig_publish, mcp__bowmark__jig_set_handle, mcp__bowmark__jig_pull_update, WebFetch
 ---
 
 # bowmark
@@ -183,6 +183,10 @@ that calls the library itself.
   `jig_open({ jigId })`; `jig_get` never touches the author's own jig.
 - **`jig_publish({ jigId, visibility, dryRun? })`** puts the user's own jig on the store as a
   snapshot. Call `jig_publish` with `dryRun: true` first and show the user what would ship.
+- **`jig_set_handle({ handle? })`** claims the user's public handle, the `@name` in their store
+  links. It is public and permanent. `jig_open` tells you when a new jig's owner has none: ask them
+  once, suggest one from their name, never choose it for them, then call `jig_set_handle`. With no
+  `handle` it only looks.
 - **Updates to a copy.** `jig_list` rows carry `forkedFrom` and `updateAvailable` (the newer
   version, or null); nothing reaches a copy until the user takes it. **`jig_pull_update({ jigId })`**
   returns `base` (the version the copy came from), `theirs` (the author's newest) and `mine`

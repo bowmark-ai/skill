@@ -19,6 +19,8 @@ lmstudio://add_mcp?name=bowmark&config=eyJ1cmwiOiJodHRwczovL2FwaS5ib3dtYXJrLmFpL
 
 The skill for [Bowmark](https://bowmark.ai), the web as callable functions. The agent reads a typed function library, writes a short script against it, and Bowmark runs it on the live sites.
 
+Jigs: small pages built on Bowmark and published for anyone to use. Each one runs with your own logins on the sites it lists, and your agent can search, open and publish them. Browse the store at https://bowmark.ai/jigs.
+
 ```sh
 npx skills add bowmark-ai/skill
 ```

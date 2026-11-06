@@ -50,17 +50,16 @@ function transform(src) {
     .replace(/`fill_form`/g, "raw browser scripting");
   // 5) drop frontmatter fields OpenAI does not read.
   out = out.replace(/^version:.*\n/m, "").replace(/^allowed-tools:.*\n/m, "");
-  // 4) (after 5, so allowed-tools is already gone) drop the secret tools. The OpenAI plugin's MCP is the ChatGPT directory
-  //    connector (/mcp/chatgpt-app), which does not offer list_secrets,
-  //    request_secret or get_secret_link — OpenAI's plugin guidelines bar a listed
-  //    plugin from soliciting credentials. apps/api `mcp-destinations.ts` holds the
-  //    same three names as SECRET_TOOL_NAMES. Each edit must match, so a canonical
-  //    reword fails the build here instead of shipping a bullet for a tool ChatGPT
-  //    was never given; the final check asserts none of the names survived.
+  // 4) (after 5, so allowed-tools is already gone) drop the secret tools from the SKILL TEXT.
+  //    OpenAI's plugin guidelines bar a listed plugin from soliciting credentials, so the skill
+  //    OpenAI reviews does not teach list_secrets, request_secret or get_secret_link. This is a
+  //    choice about the skill's words only: since 2026-11-05 every MCP URL, /mcp/chatgpt-app
+  //    included, serves all the tools. Each edit must match, so a canonical reword fails the
+  //    build here instead of shipping a bullet the OpenAI skill was never meant to teach; the
+  //    final check asserts none of the names survived.
   out = withoutSecretTools(out);
-  // 6) drop the session section. The ChatGPT directory connector does not offer
-  //    `session_call` / `session_close` (`withheldToolResponse` in apps/api
-  //    `routes/mcp.ts`), so a section teaching them names tools ChatGPT never sees.
+  // 6) drop the session section, for the same reason: the OpenAI skill text was approved
+  //    without `session_call` / `session_close`, so a section teaching them stays out of it.
   out = replaceOnce(
     out,
     /## A flow that waits on the user mid-way — `session_call`\n[\s\S]*?(?=## Stored credentials)/,
