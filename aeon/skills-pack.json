@@ -1,0 +1,17 @@
+{
+  "name": "Bowmark Pack",
+  "version": "0.1.0",
+  "description": "Scheduled reads of live websites through Bowmark: watch any page and get told what changed",
+  "author": "bowmark-ai",
+  "license": "MIT",
+  "homepage": "https://www.bowmark.ai",
+  "skills": [
+    {
+      "slug": "bowmark-page-watch",
+      "path": "skills/bowmark-page-watch",
+      "description": "Read one or more pages on a schedule and report what changed since the last run",
+      "category": "basics",
+      "schedule": "0 13 * * *"
+    }
+  ]
+}
